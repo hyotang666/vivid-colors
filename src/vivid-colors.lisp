@@ -5,3 +5,5 @@
   (:export))
 
 (in-package :vivid-colors)
+
+(defparameter *vprint-dispatch* nil)
