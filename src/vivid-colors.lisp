@@ -82,3 +82,10 @@
 
 (set-vprint-dispatch 'keyword 'vprint-keyword)
 
+(defun vprint-real (output real)
+  (let ((representation (prin1-to-string real)))
+    (with-color (cl-colors2:+violet+ :stream output)
+      (princ representation output))
+    (values)))
+
+(set-vprint-dispatch 'real 'vprint-real)
