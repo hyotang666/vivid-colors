@@ -7,7 +7,7 @@
   (
    "cl-ansi-text"               ; ANSI color control sequence.
    "cl-colors2"                 ; Color objects. Implicitly depends on via cl-ansi-text.
-   "uiop"                       ; Utilities.
+   "uiop"                       ; Utilities. Implicitly depends on via asdf.
    )
   :pathname
   "src/"
