@@ -17,7 +17,22 @@
   (defun non-printable-char-p (char)
     (values (gethash char non-printable-code-point))))
 
+;;;; TYPES
+
+(deftype indent () '(integer 0 #.most-positive-fixnum))
+
+;;;; CONFIGURATIONS
+
+(defconstant +default-line-width+ 80)
+
 (defparameter *vprint-dispatch* nil)
+
+(declaim (type indent *position*))
+
+(defvar *position*)
+
+(defmethod documentation ((o (eql '*position*)) (type (eql 'variable)))
+  "Current cursor position of the vstream.")
 
 ;;;; VPRINTER
 
@@ -61,6 +76,49 @@
                         (t
                          (error "Could not determine vprinters. ~S"
                                 vprinters))))))
+
+;;;; VPRINT-STREAM
+
+(defclass vprint-stream (trivial-gray-streams:fundamental-character-output-stream)
+  ((output :type stream
+           :initarg :output
+           :reader output
+           :initform *standard-output*
+           :documentation "Underlying actual stream.")
+   (buffer :initform (make-array (or *print-right-margin* +default-line-width+)
+                                 :fill-pointer 0
+                                 :adjustable t
+                                 :element-type 'character)
+           :reader buffer
+           :documentation "Line buffer. Note this is never include pretty newline.")
+   (start :initarg :start
+          :reader start
+          :type indent
+          :documentation "Start position of this block.")
+   (indent :initarg :indent
+           :accessor indent
+           :documentation "Indent from the start position.")
+   (queue-head :initform (cons :head nil)
+               :reader head
+               :documentation "Storing lines and newline-kinds.")
+   (queue-tail :reader tail)
+   (prefix :initform "" :initarg :prefix :reader prefix)
+   (suffix :initform "" :initarg :suffix :reader suffix)))
+
+(defmethod initialize-instance :after ((o vprint-stream) &rest args)
+  (declare (ignore args))
+  (setf (indent o) (length (prefix o))
+        (slot-value o 'queue-tail) (head o)))
+
+(defun (setf tail) (new vstream)
+  (rplacd (tail vstream) (setf (slot-value vstream 'queue-tail) (list new)))
+  new)
+
+(defmethod trivial-gray-streams:stream-write-char
+           ((s vprint-stream) (c character))
+  (vector-push-extend c (buffer s))
+  (incf *position*)
+  c)
 
 ;;;; DSL
 
