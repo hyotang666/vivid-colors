@@ -6,6 +6,7 @@
   :depends-on
   (
    "cl-ansi-text"               ; ANSI color control sequence.
+   "cl-colors2"                 ; Color objects. Implicitly depends on via cl-ansi-text.
    "uiop"                       ; Utilities.
    )
   :pathname
