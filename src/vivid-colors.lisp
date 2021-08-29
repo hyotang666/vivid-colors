@@ -120,6 +120,15 @@
   (incf *position*)
   c)
 
+(defun vprint-indent (kind indent output)
+  (setf (indent output)
+          (ecase kind
+            (:block indent)
+            (:current
+             (+ indent
+                (- *position* (start output) (length (prefix output)))))))
+  (values))
+
 ;;;; DSL
 
 (defmacro with-color ((color &key stream) &body body)
