@@ -22,6 +22,8 @@
         *vprint-dispatch*)
   t)
 
+(defun default-printer (output exp) (write exp :stream output))
+
 (defun vprint-dispatch (exp &optional (dispatch-table *vprint-dispatch*))
   (loop :for vprinter :in dispatch-table
         :if (typep exp (vprinter-type vprinter))
