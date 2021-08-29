@@ -2,7 +2,7 @@
 (in-package :asdf)
 (defsystem "vivid-colors"
   :version
-  "0.3.0"
+  "0.4.0"
   :depends-on
   nil
   :pathname

@@ -21,3 +21,30 @@
   (push (make-vprinter :type type :function function :priority priority)
         *vprint-dispatch*)
   t)
+
+(defun vprint-dispatch (exp &optional (dispatch-table *vprint-dispatch*))
+  (loop :for vprinter :in dispatch-table
+        :if (typep exp (vprinter-type vprinter))
+          :collect vprinter :into vprinters
+        :finally (setf vprinters
+                         (sort vprinters #'subtypep :key #'vprinter-type))
+                 (return
+                  (cond ((null vprinters) 'default-printer)
+                        ((null (cdr vprinters)) ; one element.
+                         (vprinter-function (car vprinters)))
+                        ((or (and (subtypep (vprinter-type (first vprinters))
+                                            (vprinter-type (second vprinters)))
+                                  (not
+                                    (subtypep
+                                      (vprinter-type (second vprinters))
+                                      (vprinter-type (first vprinters)))))
+                             (not
+                               (subtypep (vprinter-type (first vprinters))
+                                         (vprinter-type (second vprinters)))))
+                         (vprinter-function (car vprinters)))
+                        ((< (vprinter-priority (first vprinters))
+                            (vprinter-priority (second vprinters)))
+                         (vprinter-function (car vprinters)))
+                        (t
+                         (error "Could not determine vprinters. ~S"
+                                vprinters))))))
