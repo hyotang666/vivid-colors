@@ -2,9 +2,11 @@
 (in-package :asdf)
 (defsystem "vivid-colors"
   :version
-  "0.5.0"
+  "0.6.0"
   :depends-on
-  nil
+  (
+   "cl-ansi-text"               ; ANSI color control sequence.
+   )
   :pathname
   "src/"
   :components

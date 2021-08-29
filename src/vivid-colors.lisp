@@ -50,3 +50,26 @@
                         (t
                          (error "Could not determine vprinters. ~S"
                                 vprinters))))))
+
+;;;; DSL
+
+(defmacro with-color ((color &key stream) &body body)
+  (let ((output (gensym "OUTPUT")) (pre (gensym "CONTROL-SEQUENCE-PRE")))
+    `(let* ((cl-ansi-text:*color-mode* :8bit)
+            (,pre
+             (cl-ansi-text:make-color-string ,color
+                                             :effect :unset
+                                             :style :foreground))
+            (,output ,stream))
+       (when cl-ansi-text:*enabled*
+         (princ ,pre ,output)
+         (unwind-protect
+             (progn
+              ,@body
+              (incf *print-right-margin*
+                    (+ (length ,pre)
+                       (length cl-ansi-text:+reset-color-string+)))
+              (values))
+           (when cl-ansi-text:*enabled*
+             (princ cl-ansi-text:+reset-color-string+ ,output)))))))
+
