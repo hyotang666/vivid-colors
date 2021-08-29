@@ -2,10 +2,11 @@
 (in-package :asdf)
 (defsystem "vivid-colors"
   :version
-  "0.10.0"
+  "0.11.0"
   :depends-on
   (
    "cl-ansi-text"               ; ANSI color control sequence.
+   "uiop"                       ; Utilities.
    )
   :pathname
   "src/"

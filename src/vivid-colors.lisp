@@ -6,6 +6,17 @@
 
 (in-package :vivid-colors)
 
+;;;; UTILITIES
+
+(let ((non-printable-code-point
+       (uiop:list-to-hash-set
+         (concatenate 'list
+                      (loop :for i :upfrom 0 :to #.(char-code #\Space)
+                            :collect (code-char i))
+                      (string (code-char #x7F))))))
+  (defun non-printable-char-p (char)
+    (values (gethash char non-printable-code-point))))
+
 (defparameter *vprint-dispatch* nil)
 
 ;;;; VPRINTER
@@ -100,3 +111,15 @@
   (values))
 
 (set-vprint-dispatch 'string 'vprint-string)
+
+(defun vprint-char (output char)
+  (if (non-printable-char-p char)
+      (let ((name (char-name char)))
+        (with-color (cl-colors2:+limegreen+ :stream output)
+          (format output "#\\~A" name)))
+      (let ((representation (prin1-to-string char)))
+        (with-color (cl-colors2:+limegreen+ :stream output)
+          (princ representation output))))
+  (values))
+
+(set-vprint-dispatch 'character 'vprint-char)
