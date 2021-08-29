@@ -2,7 +2,7 @@
 (in-package :asdf)
 (defsystem "vivid-colors"
   :version
-  "0.9.0"
+  "0.10.0"
   :depends-on
   (
    "cl-ansi-text"               ; ANSI color control sequence.

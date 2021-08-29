@@ -93,3 +93,10 @@
 (defun vprint-symbol (output symbol) (prin1 symbol output) (values))
 
 (set-vprint-dispatch '(and symbol (not keyword)) 'vprint-symbol)
+
+(defun vprint-string (output string)
+  (with-color (cl-colors2:+tomato+ :stream output)
+    (prin1 string output))
+  (values))
+
+(set-vprint-dispatch 'string 'vprint-string)
