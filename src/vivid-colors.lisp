@@ -73,3 +73,12 @@
            (when cl-ansi-text:*enabled*
              (princ cl-ansi-text:+reset-color-string+ ,output)))))))
 
+;;;; PRINTERS
+
+(defun vprint-keyword (output keyword)
+  (with-color (cl-colors2:+yellow+ :stream output)
+    (prin1 keyword output))
+  (values))
+
+(set-vprint-dispatch 'keyword 'vprint-keyword)
+
