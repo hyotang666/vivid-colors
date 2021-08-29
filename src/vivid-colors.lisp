@@ -89,3 +89,7 @@
     (values)))
 
 (set-vprint-dispatch 'real 'vprint-real)
+
+(defun vprint-symbol (output symbol) (prin1 symbol output) (values))
+
+(set-vprint-dispatch '(and symbol (not keyword)) 'vprint-symbol)
