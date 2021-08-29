@@ -21,6 +21,9 @@
 
 (deftype indent () '(integer 0 #.most-positive-fixnum))
 
+(deftype newline-kind ()
+  '(member nil :mandatory :miser :fill :linear :mandatory))
+
 ;;;; CONFIGURATIONS
 
 (defconstant +default-line-width+ 80)
@@ -127,6 +130,12 @@
             (:current
              (+ indent
                 (- *position* (start output) (length (prefix output)))))))
+  (values))
+
+(defun vprint-newline (kind output)
+  (setf (tail output) (copy-seq (buffer output))
+        (tail output) kind
+        (fill-pointer (buffer output)) 0)
   (values))
 
 ;;;; DSL
