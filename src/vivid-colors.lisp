@@ -16,3 +16,8 @@
             :type (or function symbol)
             :read-only t)
   (priority 0 :type real :read-only t))
+
+(defun set-vprint-dispatch (type function &optional (priority 0))
+  (push (make-vprinter :type type :function function :priority priority)
+        *vprint-dispatch*)
+  t)
