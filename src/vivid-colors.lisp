@@ -181,6 +181,8 @@
 
 (set-vprint-dispatch '(and symbol (not keyword)) 'vprint-symbol)
 
+(set-vprint-dispatch 'null 'vprint-symbol)
+
 (defun vprint-string (output string)
   (with-color (cl-colors2:+tomato+ :stream output)
     (prin1 string output))
