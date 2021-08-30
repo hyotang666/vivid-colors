@@ -21,8 +21,7 @@
 
 (deftype indent () '(integer 0 #.most-positive-fixnum))
 
-(deftype newline-kind ()
-  '(member nil :mandatory :miser :fill :linear :mandatory))
+(deftype newline-kind () '(member :mandatory :miser :fill :linear :mandatory))
 
 (defstruct line
   "Elements of queue. Without indentation nor pretty-newline."
@@ -33,7 +32,7 @@
           :type (integer 0 #.array-total-size-limit)
           :read-only t)
   ;; Ending newline kind.
-  (break nil :type newline-kind :read-only t))
+  (break (error "BREAK is required.") :type newline-kind :read-only t))
 
 (defmethod print-object ((line line) output)
   (cond ((or *print-readably* *print-escape*) (call-next-method))
