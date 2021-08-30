@@ -159,6 +159,9 @@
                 (- *position* (start output) (length (prefix output)))))))
   (values))
 
+(defun compute-line-length (vstream)
+  (- *position* (length (prefix vstream)) (indent vstream) (start vstream)))
+
 (defun vprint-newline (kind output)
   (setf (tail output)
           (make-line :contents (copy-seq (buffer output))
