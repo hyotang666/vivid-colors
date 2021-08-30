@@ -165,11 +165,12 @@
  (ftype (function (newline-kind vprint-stream) (values)) vprint-newline))
 
 (defun vprint-newline (kind output)
-  (setf (tail output)
-          (make-line :contents (copy-seq (buffer output))
-                     :length (compute-line-length output)
-                     :break kind)
-        (fill-pointer (buffer output)) 0)
+  (when (typep output 'vprint-stream)
+    (setf (tail output)
+            (make-line :contents (copy-seq (buffer output))
+                       :length (compute-line-length output)
+                       :break kind)
+          (fill-pointer (buffer output)) 0))
   (values))
 
 ;;;; DSL
