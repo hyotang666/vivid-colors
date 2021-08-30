@@ -51,7 +51,11 @@
         *vprint-dispatch*)
   t)
 
-(defun default-printer (output exp) (write exp :stream output))
+(defun default-printer (output exp)
+  (let ((representation (prin1-to-string exp)))
+    (write-string representation output)
+    (incf *position* (length representation)))
+  (values))
 
 (defun vprint-dispatch (exp &optional (dispatch-table *vprint-dispatch*))
   (loop :for vprinter :in dispatch-table
@@ -120,7 +124,6 @@
 (defmethod trivial-gray-streams:stream-write-char
            ((s vprint-stream) (c character))
   (vector-push-extend c (buffer s))
-  (incf *position*)
   c)
 
 (defun vprint-indent (kind indent output)
@@ -160,11 +163,26 @@
            (when cl-ansi-text:*enabled*
              (princ cl-ansi-text:+reset-color-string+ ,output)))))))
 
+(defmacro vprint-logical-block
+          ((var <stream> &key (prefix "") (suffix "")) &body body)
+  (let ((p (gensym "PREFIX")))
+    `(let* ((,p ,prefix)
+            (,var
+             (make-instance 'vprint-stream
+                            :output (ensure-output-stream ,<stream>)
+                            :prefix ,p
+                            :suffix ,suffix
+                            :start *position*))
+            (*position* (+ *position* (length ,p))))
+       ,@body
+       (finish-output ,var))))
+
 ;;;; PRINTERS
 
 (defun vprint-keyword (output keyword)
   (with-color (cl-colors2:+yellow+ :stream output)
     (prin1 keyword output))
+  (incf *position* (1+ (length (symbol-name keyword))))
   (values))
 
 (set-vprint-dispatch 'keyword 'vprint-keyword)
@@ -172,12 +190,17 @@
 (defun vprint-real (output real)
   (let ((representation (prin1-to-string real)))
     (with-color (cl-colors2:+violet+ :stream output)
-      (princ representation output))
+      (write-string representation output))
+    (incf *position* (length representation))
     (values)))
 
 (set-vprint-dispatch 'real 'vprint-real)
 
-(defun vprint-symbol (output symbol) (prin1 symbol output) (values))
+(defun vprint-symbol (output symbol)
+  (let ((representation (prin1-to-string symbol)))
+    (write-string representation output)
+    (incf *position* (length representation)))
+  (values))
 
 (set-vprint-dispatch '(and symbol (not keyword)) 'vprint-symbol)
 
@@ -186,6 +209,7 @@
 (defun vprint-string (output string)
   (with-color (cl-colors2:+tomato+ :stream output)
     (prin1 string output))
+  (incf *position* (+ 2 (length string)))
   (values))
 
 (set-vprint-dispatch 'string 'vprint-string)
@@ -194,10 +218,12 @@
   (if (non-printable-char-p char)
       (let ((name (char-name char)))
         (with-color (cl-colors2:+limegreen+ :stream output)
-          (format output "#\\~A" name)))
+          (format output "#\\~A" name))
+        (incf *position* (+ 2 (length name))))
       (let ((representation (prin1-to-string char)))
         (with-color (cl-colors2:+limegreen+ :stream output)
-          (princ representation output))))
+          (princ representation output))
+        (incf *position* (length representation))))
   (values))
 
 (set-vprint-dispatch 'character 'vprint-char)
