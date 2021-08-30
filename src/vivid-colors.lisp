@@ -35,7 +35,7 @@
 (defvar *position*)
 
 (defmethod documentation ((o (eql '*position*)) (type (eql 'variable)))
-  "Current cursor position of the vstream.")
+  "Current view position from the outer most vstream.")
 
 ;;;; VPRINTER
 
