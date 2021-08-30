@@ -37,11 +37,10 @@
 (defmethod print-object ((line line) output)
   (cond ((or *print-readably* *print-escape*) (call-next-method))
         (t
-         (write-string (line-contents line) output
-                       :end (1+
-                              (position-if-not #'non-printable-char-p
-                                               (line-contents line)
-                                               :from-end t))))))
+         (let ((p
+                (position-if-not #'non-printable-char-p (line-contents line)
+                                 :from-end t)))
+           (write-string (line-contents line) output :end (and p (1+ p)))))))
 
 ;;;; CONFIGURATIONS
 
