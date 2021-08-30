@@ -126,7 +126,7 @@
            :documentation "Indent from the start position.")
    (queue-head :initform (cons :head nil)
                :reader head
-               :documentation "Storing lines and newline-kinds.")
+               :documentation "Storing LINE objects.")
    (queue-tail :reader tail)
    (prefix :initform "" :initarg :prefix :reader prefix)
    (suffix :initform "" :initarg :suffix :reader suffix)))
