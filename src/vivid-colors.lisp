@@ -141,6 +141,10 @@
   (rplacd (tail vstream) (setf (slot-value vstream 'queue-tail) (list new)))
   new)
 
+(defmacro doqueue ((var <vstream> &optional <return>) &body body)
+  ;; As abstraction barriar.
+  `(dolist (,var (cdr (head ,<vstream>)) ,<return>) ,@body))
+
 (defmethod trivial-gray-streams:stream-write-char
            ((s vprint-stream) (c character))
   (vector-push-extend c (buffer s))
