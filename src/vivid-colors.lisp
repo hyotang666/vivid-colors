@@ -24,6 +24,26 @@
 (deftype newline-kind ()
   '(member nil :mandatory :miser :fill :linear :mandatory))
 
+(defstruct line
+  "Elements of queue. Without indentation nor pretty-newline."
+  ;; Actual line, including ansi color escape sequence.
+  (contents "" :type simple-string :read-only t)
+  ;; Line length without ansi color escape sequence.
+  (length (error "LENGTH is required.")
+          :type (integer 0 #.array-total-size-limit)
+          :read-only t)
+  ;; Ending newline kind.
+  (break nil :type newline-kind :read-only t))
+
+(defmethod print-object ((line line) output)
+  (cond ((or *print-readably* *print-escape*) (call-next-method))
+        (t
+         (write-string (line-contents line) output
+                       :end (1+
+                              (position-if-not #'non-printable-char-p
+                                               (line-contents line)
+                                               :from-end t))))))
+
 ;;;; CONFIGURATIONS
 
 (defconstant +default-line-width+ 80)
@@ -136,8 +156,10 @@
   (values))
 
 (defun vprint-newline (kind output)
-  (setf (tail output) (copy-seq (buffer output))
-        (tail output) kind
+  (setf (tail output)
+          (make-line :contents (copy-seq (buffer output))
+                     :length (compute-line-length output)
+                     :break kind)
         (fill-pointer (buffer output)) 0)
   (values))
 
