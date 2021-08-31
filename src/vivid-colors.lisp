@@ -312,6 +312,22 @@
 
 (set-vprint-dispatch 'character 'vprint-char)
 
+(defun vprint-funcall (output form)
+  (vprint-logical-block (output output :prefix "(" :suffix ")")
+    (vprint (first form) output)
+    (cond ((null (cdr form)) (return-from vprint-funcall (values)))
+          ((atom (cdr form))
+           (write-char #\Space output)
+           (write-char #\. output)
+           (write-char #\Space output)
+           (incf *position* 3)
+           (vprint (cdr form) output))
+          (t
+           (write-char #\Space output)
+           (vprint-indent :current 0 output)
+           (vprint-newline :miser output)
+           (vprint-list output (cdr form) nil :fill)))))
+
 (defun vprint-list (output list &optional (print-paren t) (newline-kind :fill))
   (cond
     ((and (symbolp (car list)) (fboundp (car list)))
