@@ -2,7 +2,7 @@
 (in-package :asdf)
 (defsystem "vivid-colors"
   :version
-  "0.25.0"
+  "0.26.0"
   :depends-on
   (
    "trivial-gray-streams"       ; Wrapper for gray-streams.
@@ -10,6 +10,8 @@
    "cl-colors2"                 ; Color objects. Implicitly depends on via cl-ansi-text.
    "uiop"                       ; Utilities. Implicitly depends on via asdf.
    "mcase"                      ; Control frow macro with case comprehensiveness checking.
+   "millet"                     ; Wrapper for implementation dependent utilities.
+   "lambda-fiddle"              ; Utilities for lambda list processing.
    )
   :pathname
   "src/"

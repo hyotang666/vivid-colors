@@ -312,6 +312,43 @@
 
 (set-vprint-dispatch 'character 'vprint-char)
 
+(defun count-pre-body-forms (lambda-list)
+  (loop :for elt
+             :in (lambda-fiddle:remove-environment-part
+                   (lambda-fiddle:remove-whole-part
+                     (lambda-fiddle:remove-aux-part lambda-list)))
+        :for key? := (find elt lambda-list-keywords)
+        :if key?
+          :if (eq '&body key?)
+            :do (loop-finish)
+          :end
+        :else
+          :count :it))
+
+(defun vprint-macrocall (output form)
+  (vprint-logical-block (output output :prefix "(" :suffix ")")
+    (vprint (first form) output)
+    (when (null (cdr form))
+      (return-from vprint-macrocall (values)))
+    (vprint-indent :block 3 output)
+    (write-char #\Space output)
+    (loop :repeat (count-pre-body-forms (millet:lambda-list (car form)))
+          :for (elt . rest) :on (cdr form)
+          :do (vprint-newline :fill output)
+              (write elt :stream output)
+              (when (null rest)
+                (return-from vprint-macrocall (values)))
+              (write-char #\Space output)
+          :finally (vprint-indent :block 1 output)
+                   (vprint-newline :fill output)
+                   ;; body
+                   (loop :for (elt . rest) :on rest
+                         :do (write elt :stream output)
+                             (when (null rest)
+                               (return-from vprint-macrocall (values)))
+                             (write-char #\Space output)
+                             (vprint-newline :fill output)))))
+
 (defun vprint-funcall (output form)
   (vprint-logical-block (output output :prefix "(" :suffix ")")
     (vprint (first form) output)
