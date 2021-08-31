@@ -85,6 +85,41 @@
          :do (tagbody ,@body)
          :finally (return ,<return>)))
 
+;;; SECTION
+
+(defstruct (section (:conc-name nil))
+  (start (error "START is required.") :type indent)
+  (lines (make-queue) :type queue :read-only t)
+  (indent 0 :type indent)
+  (prefix "" :type simple-string :read-only t)
+  (suffix "" :type simple-string :read-only t))
+
+(defmethod print-object ((s section) output)
+  (cond ((or *print-readably* *print-escape*) (call-next-method))
+        (t
+         (flet ((newline ()
+                  (setf *newlinep* t)
+                  (terpri output)
+                  (dotimes (x (indent s)) (write-char #\Space output))))
+           (write-string (prefix s) output)
+           (doqueue ((line . rest) (lines s))
+             (princ line output)
+             (mcase:emcase newline-kind (line-break line)
+               (:mandatory (newline))
+               (:linear (newline))
+               (:miser
+                 (when (and *print-miser-width*
+                            (<= *print-miser-width*
+                                (- *print-right-margin* (start s))))
+                   (newline)))
+               (:fill
+                 (when (or (and rest
+                                (< *print-right-margin*
+                                   (+ (start s) (line-length (car rest)))))
+                           *newlinep*)
+                   (newline)))))
+           (write-string (suffix s) output)))))
+
 ;;;; VPRINTER
 
 (defstruct vprinter
