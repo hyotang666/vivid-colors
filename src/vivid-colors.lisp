@@ -388,7 +388,7 @@
     (loop :repeat (count-pre-body-forms (millet:lambda-list (car form)))
           :for (elt . rest) :on (cdr form)
           :do (vprint-newline :fill output)
-              (write elt :stream output)
+              (%vprint elt output)
               (when (null rest)
                 (return-from vprint-macrocall (values)))
               (write-char #\Space output)
@@ -396,7 +396,7 @@
                    (vprint-newline :fill output)
                    ;; body
                    (loop :for (elt . rest) :on rest
-                         :do (write elt :stream output)
+                         :do (%vprint elt output)
                              (when (null rest)
                                (return-from vprint-macrocall (values)))
                              (write-char #\Space output)
