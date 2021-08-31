@@ -109,9 +109,9 @@
 			 :prefix ""
 			 :suffix ""
 			 :start (if (boundp 'vivid-colors::*vstream*)
-				  (vivid-colors::view-position vivid-colors::*vstream*)
+				  (vivid-colors::view-length vivid-colors::*vstream*)
 				  0))))
     (vprint 'car)
-    (vivid-colors::view-position vivid-colors::*vstream*))
+    (vivid-colors::compute-length (vivid-colors::section vivid-colors::*vstream*)))
 => 3
 ,:stream nil

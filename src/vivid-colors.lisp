@@ -23,13 +23,6 @@
   (defun non-printable-char-p (char)
     (values (gethash char non-printable-code-point))))
 
-(defun count-cons (cons)
-  (labels ((rec (cons count)
-             (if (atom cons)
-                 count
-                 (rec (cdr cons) (1+ count)))))
-    (rec cons 0)))
-
 ;;;; CONFIGURATIONS
 
 (defconstant +default-line-width+ 80)
@@ -63,13 +56,7 @@
 
 (defmethod print-object ((line line) output)
   (cond ((or *print-readably* *print-escape*) (call-next-method))
-        (t
-         (let ((p
-                (position-if-not #'non-printable-char-p (line-contents line)
-                                 :from-end t)))
-           (when *newlinep*
-             (dotimes (x (line-indent line)) (write-char #\Space output)))
-           (write-string (line-contents line) output)))))
+        (t (write-string (line-contents line) output))))
 
 ;;; QUEUE
 
@@ -81,6 +68,15 @@
 (defun (setf tail) (new queue)
   (rplacd (queue-tail queue) (setf (queue-tail queue) (list new)))
   new)
+
+(eval-when (:compile-toplevel)
+  ;; DOQUEUE need this eval-when.
+  (defun count-cons (cons)
+    (labels ((rec (cons count)
+               (if (atom cons)
+                   count
+                   (rec (cdr cons) (1+ count)))))
+      (rec cons 0))))
 
 (defmacro doqueue ((var <queue> &optional <return>) &body body)
   `(loop :for ,(uiop:ensure-list var) :on (cdr (queue-head ,<queue>))
@@ -99,49 +95,57 @@
   (lines (make-queue) :type queue :read-only t)
   (suffix "" :type simple-string :read-only t))
 
-(defun compute-block-total-length (section)
-  (let ((sum 0))
-    (incf sum (length (prefix section)))
-    (doqueue ((thing nil) (lines section))
-      (incf sum
-            (etypecase thing
-              (line (line-length thing))
-              (section (compute-block-total-length thing))))
-      (incf sum))
-    (incf sum (length (suffix section)))
-    sum))
+(defun compute-length (thing)
+  (etypecase thing
+    (line (line-length thing))
+    (section
+     (let ((sum 0))
+       (incf sum (length (prefix thing)))
+       (doqueue ((thing nil) (lines thing) (decf sum))
+         (incf sum (compute-length thing))
+         (incf sum))
+       (incf sum (length (suffix thing)))
+       sum))))
 
 (defmethod print-object ((s section) output)
   (cond ((or *print-readably* *print-escape*) (call-next-method))
         (t
          (cond
-           ((<= (compute-block-total-length s) *print-right-margin*)
+           ((<= (compute-length s) *print-right-margin*)
             (write-string (prefix s) output)
             (doqueue ((thing nil) (lines s))
               (princ thing output))
             (write-string (suffix s) output))
            (t
-            (flet ((newline ()
+            (flet ((newline (thing)
                      (setf *newlinep* t)
                      (terpri output)
-                     (dotimes (x (indent s)) (write-char #\Space output))))
+                     (dotimes
+                         (x
+                          (+ (start s) (length (prefix s)) (indent s)
+                             (if (typep thing 'section)
+                                 (length (prefix thing))
+                                 0)
+                             (slot-value thing 'indent)))
+                       (write-char #\Space output))))
               (write-string (prefix s) output)
               (doqueue ((thing newline-kind . rest) (lines s))
                 (princ thing output)
                 (mcase:emcase newline-kind newline-kind
-                  (:mandatory (newline))
-                  (:linear (newline))
+                  (:mandatory (newline thing))
+                  (:linear (newline thing))
                   (:miser
                     (when (and *print-miser-width*
                                (<= *print-miser-width*
                                    (- *print-right-margin* (start s))))
-                      (newline)))
+                      (newline thing)))
                   (:fill
                     (when (or (and rest
                                    (< *print-right-margin*
-                                      (+ (start s) (line-length (car rest)))))
+                                      (+ (start s)
+                                         (compute-length (car rest)))))
                               *newlinep*)
-                      (newline)))
+                      (newline thing)))
                   ((nil))))
               (write-string (suffix s) output)))))))
 
@@ -162,7 +166,7 @@
 (defun default-printer (output exp)
   (let ((representation (prin1-to-string exp)))
     (write-string representation output)
-    (incf (view-position output) (length representation)))
+    (incf (view-length output) (length representation)))
   (values))
 
 (defun vprint-dispatch (exp &optional (dispatch-table *vprint-dispatch*))
@@ -206,10 +210,11 @@
                                  :element-type 'character)
            :reader buffer
            :documentation "Line buffer. Note this is never include pretty newline.")
-   (view-position :initarg :view-position
-                  :accessor view-position
-                  :type indent
-                  :documentation "Current view position from outer most start.")
+   (view-length :initarg :view-length
+                :initform 0
+                :accessor view-length
+                :type indent
+                :documentation "Current view length without indent, i.e. line length.")
    (section :initarg :section
             :type section
             :accessor section
@@ -218,9 +223,8 @@
 (defmethod initialize-instance :after
            ((o vprint-stream)
             &key (start 0) (prefix "") (suffix "") &allow-other-keys)
-  (setf (view-position o) (+ (length prefix) start)
-        (section o)
-          (make-section :start (view-position o)
+  (setf (section o)
+          (make-section :start (+ (length prefix) start)
                         :prefix prefix
                         :suffix suffix
                         :indent (length prefix))))
@@ -233,16 +237,8 @@
 (defun vprint-indent (kind indent output)
   (let ((section (section output)))
     (setf (indent section)
-            (ecase kind
-              (:block indent)
-              (:current
-               (+ (start section) (length (prefix section)) indent)))))
+            (ecase kind (:block indent) (:current (view-length output)))))
   (values))
-
-(defun compute-line-length (vstream)
-  (let ((section (section vstream)))
-    (- (view-position vstream) (length (prefix section)) (indent section)
-       (start section))))
 
 (declaim
  (ftype (function (newline-kind vprint-stream) (values)) vprint-newline))
@@ -252,9 +248,10 @@
     (setf (tail (lines (section output)))
             (make-line :contents (copy-seq (buffer output))
                        :indent (indent (section output))
-                       :length (compute-line-length output))
+                       :length (view-length output))
           (tail (lines (section output))) kind
-          (fill-pointer (buffer output)) 0))
+          (fill-pointer (buffer output)) 0
+          (view-length output) 0))
   (values))
 
 (defmethod trivial-gray-streams:stream-finish-output ((s vprint-stream))
@@ -286,17 +283,25 @@
 
 (defmacro vprint-logical-block
           ((var <stream> &key (prefix "") (suffix "")) &body body)
-  (let ((o (gensym "OUTER-MOST-P")) (s (gensym "SECTION")))
+  (let ((o (gensym "OUTER-MOST-P"))
+        (s (gensym "SECTION"))
+        (p (gensym "PREFIX")))
     `(let* ((,s
              (when (boundp '*vstream*)
                (section *vstream*)))
+            (,p ,prefix)
             (,var
              (if (boundp '*vstream*)
                  (progn
                   (setf (section *vstream*)
-                          (make-section :start (view-position *vstream*)
-                                        :prefix ,prefix
-                                        :suffix ,suffix))
+                          (make-section :start (let ((section
+                                                      (section *vstream*)))
+                                                 (+ (start section)
+                                                    (length (prefix section))
+                                                    (view-length *vstream*)))
+                                        :prefix ,p
+                                        :suffix ,suffix
+                                        :indent (length ,p)))
                   *vstream*)
                  (make-instance 'vprint-stream
                                 :output (ensure-output-stream ,<stream>)
@@ -319,7 +324,7 @@
 (defun vprint-keyword (output keyword)
   (with-color (cl-colors2:+yellow+ :stream output)
     (prin1 keyword output))
-  (incf (view-position output) (1+ (length (symbol-name keyword))))
+  (incf (view-length output) (1+ (length (symbol-name keyword))))
   (values))
 
 (set-vprint-dispatch 'keyword 'vprint-keyword)
@@ -328,7 +333,7 @@
   (let ((representation (prin1-to-string real)))
     (with-color (cl-colors2:+violet+ :stream output)
       (write-string representation output))
-    (incf (view-position output) (length representation))
+    (incf (view-length output) (length representation))
     (values)))
 
 (set-vprint-dispatch 'real 'vprint-real)
@@ -336,7 +341,7 @@
 (defun vprint-symbol (output symbol)
   (let ((representation (prin1-to-string symbol)))
     (write-string representation output)
-    (incf (view-position output) (length representation)))
+    (incf (view-length output) (length representation)))
   (values))
 
 (set-vprint-dispatch '(and symbol (not keyword)) 'vprint-symbol)
@@ -346,7 +351,7 @@
 (defun vprint-string (output string)
   (with-color (cl-colors2:+tomato+ :stream output)
     (prin1 string output))
-  (incf (view-position output) (+ 2 (length string)))
+  (incf (view-length output) (+ 2 (length string)))
   (values))
 
 (set-vprint-dispatch 'string 'vprint-string)
@@ -356,11 +361,11 @@
       (let ((name (char-name char)))
         (with-color (cl-colors2:+limegreen+ :stream output)
           (format output "#\\~A" name))
-        (incf (view-position output) (+ 2 (length name))))
+        (incf (view-length output) (+ 2 (length name))))
       (let ((representation (prin1-to-string char)))
         (with-color (cl-colors2:+limegreen+ :stream output)
           (princ representation output))
-        (incf (view-position output) (length representation))))
+        (incf (view-length output) (length representation))))
   (values))
 
 (set-vprint-dispatch 'character 'vprint-char)
@@ -385,13 +390,15 @@
       (return-from vprint-macrocall (values)))
     (vprint-indent :block 3 output)
     (write-char #\Space output)
+    (incf (view-length output))
     (loop :repeat (count-pre-body-forms (millet:lambda-list (car form)))
           :for (elt . rest) :on (cdr form)
-          :do (vprint-newline :fill output)
+          :do (vprint-newline :miser output)
               (%vprint elt output)
               (when (null rest)
                 (return-from vprint-macrocall (values)))
               (write-char #\Space output)
+              (incf (view-length output))
           :finally (vprint-indent :block 1 output)
                    (vprint-newline :fill output)
                    ;; body
@@ -400,6 +407,7 @@
                              (when (null rest)
                                (return-from vprint-macrocall (values)))
                              (write-char #\Space output)
+                             (incf (view-length output))
                              (vprint-newline :fill output)))))
 
 (defun vprint-funcall (output form)
@@ -410,7 +418,7 @@
            (write-char #\Space output)
            (write-char #\. output)
            (write-char #\Space output)
-           (incf (view-position output) 3)
+           (incf (view-length output) 3)
            (%vprint (cdr form) output))
           (t
            (write-char #\Space output)
@@ -437,13 +445,13 @@
                         ((atom list)
                          (write-char #\. output)
                          (write-char #\Space output)
-                         (incf (view-position output) 2)
+                         (incf (view-length output) 2)
                          (%vprint list output))
                         ((consp list)
                          (%vprint (car list) output)
                          (when (cdr list)
                            (write-char #\Space output)
-                           (incf (view-position output) 1)
+                           (incf (view-length output) 1)
                            (vprint-newline newline-kind output)
                            (rec (cdr list)))))))
          (rec list)))))
@@ -482,7 +490,7 @@
     (let ((namestring (namestring pathname)))
       (with-color (cl-colors2:+tomato+ :stream output)
         (prin1 namestring output))
-      (incf (view-position output) (+ 4 (length namestring)))))
+      (incf (view-length output) (+ 4 (length namestring)))))
   (values))
 
 (set-vprint-dispatch 'pathname 'vprint-pathname)
