@@ -305,3 +305,34 @@
   (values))
 
 (set-vprint-dispatch 'character 'vprint-char)
+
+(defun vprint-list (output list &optional (print-paren t) (newline-kind :fill))
+  (cond
+    ((and (symbolp (car list)) (fboundp (car list)))
+     (vprint-funcall output list))
+    (t
+     (vprint-logical-block (output output
+                                   :prefix (if print-paren
+                                               "("
+                                               "")
+                                   :suffix (if print-paren
+                                               ")"
+                                               ""))
+       (labels ((rec (list)
+                  (cond ((null list))
+                        ((atom list)
+                         (write-char #\. output)
+                         (write-char #\Space output)
+                         (incf *position* 2)
+                         (vprint list output))
+                        ((consp list)
+                         (vprint (car list) output)
+                         (when (cdr list)
+                           (write-char #\Space output)
+                           (incf *position* 1)
+                           (vprint-newline newline-kind output)
+                           (rec (cdr list)))))))
+         (rec list)))))
+  (values))
+
+(set-vprint-dispatch 'list 'vprint-list)
