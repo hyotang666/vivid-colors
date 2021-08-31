@@ -65,6 +65,22 @@
 
 (defvar *newlinep* nil)
 
+;;; QUEUE
+
+(defstruct (queue (:constructor make-queue
+                   (&aux (head (cons :head nil)) (tail head))))
+  head
+  (tail (error "TAIL is required.")))
+
+(defun (setf tail) (new queue)
+  (rplacd (queue-tail queue) (setf (queue-tail queue) (list new)))
+  new)
+
+(defmacro doqueue ((var <queue> &optional <return>) &body body)
+  `(loop :for ,(uiop:ensure-list var) :on (cdr (queue-head ,<queue>))
+         :do (tagbody ,@body)
+         :finally (return ,<return>)))
+
 ;;;; VPRINTER
 
 (defstruct vprinter
@@ -144,16 +160,6 @@
   (declare (ignore args))
   (setf (indent o) (length (prefix o))
         (slot-value o 'queue-tail) (head o)))
-
-(defun (setf tail) (new vstream)
-  (rplacd (tail vstream) (setf (slot-value vstream 'queue-tail) (list new)))
-  new)
-
-(defmacro doqueue ((var <vstream> &optional <return>) &body body)
-  ;; As abstraction barriar.
-  `(loop :for ,(uiop:ensure-list var) :on (cdr (head ,<vstream>))
-         :do (tagbody ,@body)
-         :finally (return ,<return>)))
 
 (defmethod trivial-gray-streams:stream-write-char
            ((s vprint-stream) (c character))
