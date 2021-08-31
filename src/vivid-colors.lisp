@@ -354,3 +354,11 @@
   (values))
 
 (set-vprint-dispatch '(cons (member function)) 'vprint-function)
+
+(defun vprint-backquote (output backquote)
+  (vprint-logical-block (output output :prefix "`")
+    (vprint-list output (cdr backquote) nil))
+  (values))
+
+(set-vprint-dispatch '(cons (member #.(or #+sbcl 'sb-int:quasiquote)))
+                     'vprint-backquote)
