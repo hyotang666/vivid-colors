@@ -29,6 +29,8 @@
 
 (deftype newline-kind () '(member :mandatory :miser :fill :linear :mandatory))
 
+;;; LINE
+
 (defstruct line
   "Elements of queue. Without indentation nor pretty-newline."
   ;; Actual line, including ansi color escape sequence.
