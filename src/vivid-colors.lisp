@@ -477,6 +477,16 @@
 (set-vprint-dispatch '(cons (member #.(or #+sbcl 'sb-int:quasiquote)))
                      'vprint-backquote)
 
+(defun vprint-pathname (output pathname)
+  (vprint-logical-block (output output :prefix "#P")
+    (let ((namestring (namestring pathname)))
+      (with-color (cl-colors2:+tomato+ :stream output)
+        (prin1 namestring output))
+      (incf (view-position output) (+ 4 (length namestring)))))
+  (values))
+
+(set-vprint-dispatch 'pathname 'vprint-pathname)
+
 ;;;; VPRINT
 
 (defun vprint (exp &optional output)
