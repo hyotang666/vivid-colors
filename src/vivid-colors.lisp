@@ -336,3 +336,12 @@
   (values))
 
 (set-vprint-dispatch 'list 'vprint-list)
+
+(defun vprint-quote (output quote)
+  (if (cddr quote)
+      (vprint-list output quote)
+      (vprint-logical-block (output output :prefix "'")
+        (vprint-list output (cdr quote) nil)))
+  (values))
+
+(set-vprint-dispatch '(cons (member quote)) 'vprint-quote)
