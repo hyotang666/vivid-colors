@@ -85,3 +85,33 @@
 ; Exception situation: Some args.
 #?(vprint '(quote a b c))
 :outputs "(QUOTE A B C)"
+
+; FUNCTION is printed as macro char.
+#?(vprint '#'car)
+:outputs "#'CAR"
+
+; Exception situation: Some args.
+#?(vprint '(function a b c))
+:outputs "(FUNCTION A B C)"
+
+; Pathname.
+#?(vprint #P"tomato")
+:outputs #.(let ((cl-ansi-text:*color-mode* :8bit))
+	     (with-output-to-string (out)
+	       (princ "#P" out)
+	       (cl-ansi-text:with-color (cl-colors2:+tomato+ :stream out)
+		 (prin1 "tomato" out))))
+
+; VPRINT increase VIEW-POSITION.
+#?(let ((vivid-colors::*vstream*
+	  (make-instance 'vivid-colors::vprint-stream
+			 :output *standard-output*
+			 :prefix ""
+			 :suffix ""
+			 :start (if (boundp 'vivid-colors::*vstream*)
+				  (vivid-colors::view-position vivid-colors::*vstream*)
+				  0))))
+    (vprint 'car)
+    (vivid-colors::view-position vivid-colors::*vstream*))
+=> 3
+,:stream nil
