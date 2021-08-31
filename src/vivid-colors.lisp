@@ -253,8 +253,7 @@
                             :suffix ,suffix
                             :start *position*))
             (*position* (+ *position* (length ,p))))
-       ,@body
-       (finish-output ,var))))
+       (unwind-protect (progn ,@body) (finish-output ,var)))))
 
 ;;;; PRINTERS
 
