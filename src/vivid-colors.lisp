@@ -345,3 +345,12 @@
   (values))
 
 (set-vprint-dispatch '(cons (member quote)) 'vprint-quote)
+
+(defun vprint-function (output function)
+  (if (cddr function)
+      (vprint-list output function)
+      (vprint-logical-block (output output :prefix "#'")
+        (vprint-list output (cdr function) nil)))
+  (values))
+
+(set-vprint-dispatch '(cons (member function)) 'vprint-function)
