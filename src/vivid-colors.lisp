@@ -8,6 +8,12 @@
 
 ;;;; UTILITIES
 
+(defun ensure-output-stream (designator)
+  (etypecase designator
+    (stream designator)
+    (null *standard-output*)
+    ((eql t) *terminal-io*)))
+
 (let ((non-printable-code-point
        (uiop:list-to-hash-set
          (concatenate 'list
@@ -362,3 +368,12 @@
 
 (set-vprint-dispatch '(cons (member #.(or #+sbcl 'sb-int:quasiquote)))
                      'vprint-backquote)
+
+;;;; VPRINT
+
+(defun vprint (exp &optional output)
+  (let ((*print-right-margin* (or *print-right-margin* +default-line-width+))
+        (*position* 0)
+        (*newlinep* *newlinep*))
+    (vprint-logical-block (stream output)
+      (funcall (vprint-dispatch exp) stream exp))))
