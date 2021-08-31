@@ -55,6 +55,10 @@
 (defmethod documentation ((o (eql '*position*)) (type (eql 'variable)))
   "Current view position from the outer most vstream.")
 
+(declaim (type boolean *newlinep*))
+
+(defvar *newlinep* nil)
+
 ;;;; VPRINTER
 
 (defstruct vprinter
@@ -141,7 +145,9 @@
 
 (defmacro doqueue ((var <vstream> &optional <return>) &body body)
   ;; As abstraction barriar.
-  `(dolist (,var (cdr (head ,<vstream>)) ,<return>) ,@body))
+  `(loop :for ,(uiop:ensure-list var) :on (cdr (head ,<vstream>))
+         :do (tagbody ,@body)
+         :finally (return ,<return>)))
 
 (defmethod trivial-gray-streams:stream-write-char
            ((s vprint-stream) (c character))
@@ -171,6 +177,48 @@
                        :break kind)
           (fill-pointer (buffer output)) 0))
   (values))
+
+(defun compute-block-total-length (vstream)
+  (+ (length (prefix vstream))
+     (let ((sum -1))
+       (doqueue (line vstream (max 0 sum))
+         (incf sum (1+ (line-length line)))))
+     (fill-pointer (buffer vstream)) (length (suffix vstream))))
+
+(defmethod trivial-gray-streams:stream-finish-output ((s vprint-stream))
+  (cond
+    ((< (+ *position* (compute-block-total-length s)) *print-right-margin*)
+     (write-string (prefix s) (output s))
+     (doqueue (line s)
+       (princ line (output s))
+       (write-char #\Space (output s)))
+     (write-string (buffer s) (output s))
+     (write-string (suffix s) (output s)))
+    (t
+     (flet ((newline ()
+              (setf *newlinep* t)
+              (terpri (output s))
+              (dotimes (x (indent s)) (write-char #\Space (output s)))))
+       (write-string (prefix s) (output s))
+       (doqueue ((line . rest) s)
+         (princ line (output s))
+         (write-char #\Space (output s))
+         (mcase:emcase newline-kind (line-break line)
+           (:mandatory (newline))
+           (:linear (newline))
+           (:miser
+             (when (and *print-miser-width*
+                        (<= *print-miser-width*
+                            (- *print-right-margin* *position*)))
+               (newline)))
+           (:fill
+             (when (or (and rest
+                            (< *print-right-margin*
+                               (+ *position* (line-length (car rest)))))
+                       *newlinep*)
+               (newline)))))
+       (write-string (buffer s) (output s))
+       (write-string (suffix s) (output s))))))
 
 ;;;; DSL
 
