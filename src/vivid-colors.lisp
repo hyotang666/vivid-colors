@@ -367,7 +367,9 @@
 
 (defun vprint-list (output list &optional (print-paren t) (newline-kind :fill))
   (cond
-    ((and (symbolp (car list)) (fboundp (car list)))
+    ((and (symbolp (car list)) (macro-function (car list)) print-paren)
+     (vprint-macrocall output list))
+    ((and (symbolp (car list)) (fboundp (car list)) print-paren)
      (vprint-funcall output list))
     (t
      (vprint-logical-block (output output
