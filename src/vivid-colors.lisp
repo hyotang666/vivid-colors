@@ -23,6 +23,18 @@
   (defun non-printable-char-p (char)
     (values (gethash char non-printable-code-point))))
 
+;;;; CONFIGURATIONS
+
+(defconstant +default-line-width+ 80)
+
+(defparameter *vprint-dispatch* nil)
+
+(declaim (type boolean *newlinep*))
+
+(defvar *newlinep* nil)
+
+(defvar *vstream*)
+
 ;;;; TYPES
 
 (deftype indent () '(integer 0 #.most-positive-fixnum))
@@ -50,22 +62,12 @@
                                  :from-end t)))
            (write-string (line-contents line) output :end (and p (1+ p)))))))
 
-;;;; CONFIGURATIONS
-
-(defconstant +default-line-width+ 80)
-
-(defparameter *vprint-dispatch* nil)
-
 (declaim (type indent *position*))
 
 (defvar *position*)
 
 (defmethod documentation ((o (eql '*position*)) (type (eql 'variable)))
   "Current view position from the outer most vstream.")
-
-(declaim (type boolean *newlinep*))
-
-(defvar *newlinep* nil)
 
 ;;; QUEUE
 
