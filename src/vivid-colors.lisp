@@ -2,7 +2,21 @@
 
 (defpackage :vivid-colors
   (:use :cl)
-  (:export))
+  (:export ;;;; MAIN API
+           "VPRINT" ; like CL:PPRINT
+           )
+  (:export ;;;; EXTEND
+           "SET-VPRINT-DISPATCH" ; like CL:SET-PPRINT-DISPATCH.
+           "*VPRINT-DISPATCH*" ; like CL:*PRINT-PPRINT-DISPATCH*.
+	   "COPY-VPRINT-DISPATCH" ; like CL:COPY-PPRINT-DISPATCH.
+           )
+  (:export ;;;; HELPER
+           "PUT" ; like CL:WRITE.
+           "PUT-CHAR" ; like CL:WRITE-CHAR.
+           "VPRINT-NEWLINE" ; like CL:PPRINT-NEWLINE.
+           "VPRINT-INDENT" ; like CL:PPRINT-INDENT.
+           "VPRINT-LOGICAL-BLOCK" ; like CL:PPRINT-LOGICAL-BLOCK.
+           ))
 
 (in-package :vivid-colors)
 
