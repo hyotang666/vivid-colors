@@ -311,6 +311,19 @@
 
 ;;;; Exceptional-Situations:
 
+(requirements-about *VPRINT-DISPATCH* :doc-type variable)
+
+;;;; Description:
+; CL:*PRINT-PPRINT-DISPATCH* for VPRINT-STREAM.
+
+;;;; Value type is unspecified.
+#? *VPRINT-DISPATCH* => unspecified
+
+;;;; Affected By:
+; set-vprint-dispatch, copy-vprint-dispatch
+
+;;;; Notes:
+
 (requirements-about VPRINT :doc-type function)
 
 ;;;; Description:
