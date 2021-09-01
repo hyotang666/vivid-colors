@@ -371,6 +371,7 @@
         set-vprint-dispatch))
 
 (defun set-vprint-dispatch (type function &optional (priority 0))
+  (assert (millet:type-specifier-p type))
   (push (make-vprinter :type type :function function :priority priority)
         *vprint-dispatch*)
   t)
