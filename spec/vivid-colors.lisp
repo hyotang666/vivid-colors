@@ -513,3 +513,36 @@
     (vivid-colors::compute-length (vivid-colors::section vivid-colors::*vstream*)))
 => 3
 ,:stream nil
+
+(requirements-about *PRINT-VIVID* :doc-type variable)
+
+;;;; Description:
+
+;;;; Value type is BOOLEAN
+#? *PRINT-VIVID* :be-the BOOLEAN
+
+; Initial value is `T`
+
+;;;; Affected By:
+; VPRINT.
+#?(let ((*print-vivid* t))
+    (vprint :hoge))
+:outputs #.(let ((cl-ansi-text:*color-mode* :8bit))
+	     (cl-ansi-text:yellow (prin1-to-string :hoge)))
+
+#?(let ((*print-vivid* nil))
+    (vprint :hoge))
+:outputs ":HOGE"
+
+;;;; Notes:
+; This is control coloring only. Pretty printings is not its responds.
+#?(let ((*print-vivid* nil))
+    (vprint-logical-block (out nil)
+      (vprint-newline :mandatory out)))
+:outputs "
+"
+
+#?(let ((*print-pretty* nil))
+    (vprint-logical-block (out nil)
+      (vprint-newline :mandatory out)))
+:outputs ""
