@@ -29,6 +29,8 @@
 
 (defparameter *vprint-dispatch* nil)
 
+(defvar *standard-vprint-dispatch*)
+
 (declaim (type boolean *newlinep*))
 
 (defvar *newlinep* nil)
@@ -350,6 +352,15 @@
                          (error "Could not determine vprinters. ~S"
                                 vprinters))))))
 
+(declaim
+ (ftype (function (&optional (or null cons)) (values list &optional))
+        copy-vprint-dispatch))
+
+(defun copy-vprint-dispatch (&optional (vprint-dispatch *vprint-dispatch*))
+  (if vprint-dispatch
+      (copy-seq vprint-dispatch)
+      (copy-seq *standard-vprint-dispatch*)))
+
 ;;;; PRINTERS
 
 (defun vprint-keyword (output keyword)
@@ -516,12 +527,14 @@
                    :color cl-colors2:+yellow+
                    :key (lambda (n) (format nil ":~S" n)))
               (put-char #\Space output)
-              (%vprint (slot-value structure name) output)
+              (vprint (slot-value structure name) output t)
               (when rest
                 (put-char #\Space output)
                 (vprint-newline :linear output)))))
 
 (set-vprint-dispatch 'structure-object 'vprint-structure)
+
+(setq *standard-vprint-dispatch* (copy-vprint-dispatch))
 
 ;;;; VPRINT
 
@@ -532,4 +545,14 @@
       (%vprint exp output))))
 
 (defun %vprint (exp &optional output)
-  (funcall (coerce (vprint-dispatch exp) 'function) output exp))
+  (funcall (coerce (vprint-dispatch exp) 'function) output exp))(declaim
+ (ftype (function (t &optional stream boolean) (values null &optional)) vprint))
+
+(defun vprint (exp &optional output recursivep)
+  (if recursivep
+      (funcall (coerce (vprint-dispatch exp) 'function) output exp)
+      (let ((*print-right-margin*
+             (or *print-right-margin* +default-line-width+))
+            (*newlinep*))
+        (vprint-logical-block (output output)
+          (funcall (coerce (vprint-dispatch exp) 'function) output exp)))))
