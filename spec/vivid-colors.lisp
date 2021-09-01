@@ -5,6 +5,42 @@
 (in-package :vivid-colors.spec)
 (setup :vivid-colors)
 
+(requirements-about PUT-CHAR :doc-type function)
+
+;;;; Description:
+; WRITE-CHAR for VPRINT-STREAM.
+
+#+syntax (PUT-CHAR char output) ; => result
+
+;;;; Arguments and Values:
+
+; char := character, otherwise implementation dependent condition.
+#?(put-char "not character" (make-instance 'vivid-colors::vprint-stream))
+:signals condition
+
+; output := vprint-stream, otherwise implementation dependent condition.
+#?(put-char #\a "not vprint-stream") :signals condition
+
+; result := character
+
+;;;; Affected By:
+; none
+
+;;;; Side-Effects:
+; Modify vprint-stream state.
+#?(let ((vs (make-instance 'vivid-colors::vprint-stream)))
+    (values (copy-seq (vivid-colors::buffer vs))
+	    (vivid-colors::view-length vs)
+	    (put-char #\a vs)
+	    (copy-seq (vivid-colors::buffer vs))
+	    (vivid-colors::view-length vs)))
+:values ("" 0 #\a "a" 1)
+
+;;;; Notes:
+; Because above side effect, you should use PUT-CHAR rather than WRITE-CHAR for VPRINT-STREAM.
+
+;;;; Exceptional-Situations:
+
 (requirements-about VPRINT :doc-type function)
 
 ;;;; Description:
