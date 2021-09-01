@@ -23,6 +23,18 @@
   (defun non-printable-char-p (char)
     (values (gethash char non-printable-code-point))))
 
+(defun put-char (char output)
+  (write-char char output)
+  (incf (view-length output)))
+
+(defun put (object output &key color (key #'prin1-to-string))
+  (let ((notation (funcall key object)))
+    (if color
+        (with-color (color :stream output)
+          (write-string notation output))
+        (write-string notation output))
+    (incf (view-length output) (length notation))))
+
 ;;;; CONFIGURATIONS
 
 (defconstant +default-line-width+ 80)
@@ -195,11 +207,7 @@
         *vprint-dispatch*)
   t)
 
-(defun default-printer (output exp)
-  (let ((representation (prin1-to-string exp)))
-    (write-string representation output)
-    (incf (view-length output) (length representation)))
-  (values))
+(defun default-printer (output exp) (put exp output) (values))
 
 (defun vprint-dispatch (exp &optional (dispatch-table *vprint-dispatch*))
   (loop :for vprinter :in dispatch-table
@@ -258,6 +266,8 @@
 
 (defmethod trivial-gray-streams:stream-write-char
            ((s vprint-stream) (c character))
+  ;; NOTE: Never (INCF (VIEW-LENGTH *VSTREAM*)) here
+  ;; because this method is used for escape sequence too.
   (vector-push-extend c (buffer s))
   c)
 
@@ -332,50 +342,36 @@
 ;;;; PRINTERS
 
 (defun vprint-keyword (output keyword)
-  (with-color (cl-colors2:+yellow+ :stream output)
-    (prin1 keyword output))
-  (incf (view-length output) (1+ (length (symbol-name keyword))))
+  (put keyword output :color cl-colors2:+yellow+)
   (values))
 
 (set-vprint-dispatch 'keyword 'vprint-keyword)
 
 (defun vprint-real (output real)
-  (let ((representation (prin1-to-string real)))
-    (with-color (cl-colors2:+violet+ :stream output)
-      (write-string representation output))
-    (incf (view-length output) (length representation))
-    (values)))
+  (put real output :color cl-colors2:+violet+)
+  (values))
 
 (set-vprint-dispatch 'real 'vprint-real)
 
-(defun vprint-symbol (output symbol)
-  (let ((representation (prin1-to-string symbol)))
-    (write-string representation output)
-    (incf (view-length output) (length representation)))
-  (values))
+(defun vprint-symbol (output symbol) (put symbol output) (values))
 
 (set-vprint-dispatch '(and symbol (not keyword)) 'vprint-symbol)
 
 (set-vprint-dispatch 'null 'vprint-symbol)
 
 (defun vprint-string (output string)
-  (with-color (cl-colors2:+tomato+ :stream output)
-    (prin1 string output))
-  (incf (view-length output) (+ 2 (length string)))
+  (put string output :color cl-colors2:+tomato+)
   (values))
 
 (set-vprint-dispatch 'string 'vprint-string)
 
 (defun vprint-char (output char)
-  (if (non-printable-char-p char)
-      (let ((name (char-name char)))
-        (with-color (cl-colors2:+limegreen+ :stream output)
-          (format output "#\\~A" name))
-        (incf (view-length output) (+ 2 (length name))))
-      (let ((representation (prin1-to-string char)))
-        (with-color (cl-colors2:+limegreen+ :stream output)
-          (princ representation output))
-        (incf (view-length output) (length representation))))
+  (put char output
+       :color cl-colors2:+limegreen+
+       :key (lambda (c)
+              (if (non-printable-char-p c)
+                  (format nil "#\\~A" (char-name c))
+                  (prin1-to-string c))))
   (values))
 
 (set-vprint-dispatch 'character 'vprint-char)
@@ -399,16 +395,14 @@
     (when (null (cdr form))
       (return-from vprint-macrocall (values)))
     (vprint-indent :block 3 output)
-    (write-char #\Space output)
-    (incf (view-length output))
+    (put-char #\Space output)
     (loop :repeat (count-pre-body-forms (millet:lambda-list (car form)))
           :for (elt . rest) :on (cdr form)
           :do (vprint-newline :miser output)
               (%vprint elt output)
               (when (null rest)
                 (return-from vprint-macrocall (values)))
-              (write-char #\Space output)
-              (incf (view-length output))
+              (put-char #\Space output)
           :finally (vprint-indent :block 1 output)
                    (vprint-newline :fill output)
                    ;; body
@@ -416,8 +410,7 @@
                          :do (%vprint elt output)
                              (when (null rest)
                                (return-from vprint-macrocall (values)))
-                             (write-char #\Space output)
-                             (incf (view-length output))
+                             (put-char #\Space output)
                              (vprint-newline :fill output)))))
 
 (defun vprint-funcall (output form)
@@ -425,14 +418,12 @@
     (%vprint (first form) output)
     (cond ((null (cdr form)) (values))
           ((atom (cdr form))
-           (write-char #\Space output)
-           (write-char #\. output)
-           (write-char #\Space output)
-           (incf (view-length output) 3)
+           (put-char #\Space output)
+           (put-char #\. output)
+           (put-char #\Space output)
            (%vprint (cdr form) output))
           (t
-           (write-char #\Space output)
-           (incf (view-length output))
+           (put-char #\Space output)
            (vprint-indent :current 0 output)
            (vprint-newline :miser output)
            (vprint-list output (cdr form) nil :fill)))))
@@ -454,15 +445,13 @@
        (labels ((rec (list)
                   (cond ((null list))
                         ((atom list)
-                         (write-char #\. output)
-                         (write-char #\Space output)
-                         (incf (view-length output) 2)
+                         (put-char #\. output)
+                         (put-char #\Space output)
                          (%vprint list output))
                         ((consp list)
                          (%vprint (car list) output)
                          (when (cdr list)
-                           (write-char #\Space output)
-                           (incf (view-length output) 1)
+                           (put-char #\Space output)
                            (vprint-newline newline-kind output)
                            (rec (cdr list)))))))
          (rec list)))))
@@ -498,36 +487,27 @@
 
 (defun vprint-pathname (output pathname)
   (vprint-logical-block (output output :prefix "#P")
-    (let ((namestring (namestring pathname)))
-      (with-color (cl-colors2:+tomato+ :stream output)
-        (prin1 namestring output))
-      (incf (view-length output) (+ 4 (length namestring)))))
+    (put pathname output
+         :color cl-colors2:+tomato+
+         :key (lambda (p) (prin1-to-string (namestring p)))))
   (values))
 
 (set-vprint-dispatch 'pathname 'vprint-pathname)
 
 (defun vprint-structure (output structure)
   (vprint-logical-block (output output :prefix "#S(" :suffix ")")
-    (let ((name (prin1-to-string (type-of structure))))
-      (with-color (cl-colors2:+limegreen+ :stream output)
-        (princ name output))
-      (incf (view-length output) (length name)))
-    (write-char #\Space output)
-    (incf (view-length output))
+    (put (type-of structure) output :color cl-colors2:+limegreen+)
+    (put-char #\Space output)
     (vprint-indent :current 0 output)
     (loop :for (slot . rest) :on (c2mop:class-slots (class-of structure))
           :for name = (c2mop:slot-definition-name slot)
-          :do (let ((namestring (prin1-to-string name)))
-                (with-color (cl-colors2:+yellow+ :stream output)
-                  (write-char #\: output)
-                  (write-string namestring output))
-                (incf (view-length output) (1+ (length namestring))))
-              (write-char #\Space output)
-              (incf (view-length output))
+          :do (put name output
+                   :color cl-colors2:+yellow+
+                   :key (lambda (n) (format nil ":~S" n)))
+              (put-char #\Space output)
               (%vprint (slot-value structure name) output)
               (when rest
-                (write-char #\Space output)
-                (incf (view-length output))
+                (put-char #\Space output)
                 (vprint-newline :linear output)))))
 
 (set-vprint-dispatch 'structure-object 'vprint-structure)
