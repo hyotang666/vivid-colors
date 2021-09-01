@@ -142,7 +142,7 @@
      (let ((sum 0))
        (declare (type (mod #.most-positive-fixnum) sum))
        (incf sum (length (prefix thing)))
-       (doqueue ((thing nil) (lines thing) (decf sum))
+       (doqueue ((thing nil) (lines thing) (setf sum (max 0 (1- sum))))
          (unless (and (typep thing 'line)
                       (every #'non-printable-char-p (line-contents thing)))
            (incf sum (compute-length thing))
