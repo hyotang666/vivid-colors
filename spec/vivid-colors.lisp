@@ -252,6 +252,65 @@
 
 ;;;; Exceptional-Situations:
 
+(requirements-about VPRINT-LOGICAL-BLOCK :doc-type function)
+
+;;;; Description:
+; PPRINT-LOGICAL-BLOCK for VPRINT-STREAM.
+
+#+syntax (VPRINT-LOGICAL-BLOCK (var <stream> &key (prefix "") (suffix ""))
+           &body
+           body)
+; => result
+
+;;;; Arguments and Values:
+
+; var := symbol, otherwise implementation dependent condition.
+#?(vprint-logical-block ("not symbol" nil)) :signals condition
+; Not evaluated.
+#?(vprint-logical-block ((intern "not evaluated.") nil)) :signals condition
+
+; <stream> := The form that generates output stream designator, otherwise type error.
+#?(vprint-logical-block (var "not output stream")) :signals type-error
+
+; prefix := string, otherwise implementation dependent condition.
+#?(vprint-logical-block (var nil :prefix 'not-string)) :signals condition
+
+; suffix := string, otherwise implementation dependent condition.
+#?(vprint-logical-block (var nil :suffix 'not-string)) :signals condition
+
+; body := implicit progn.
+
+; result := T
+
+;;;; Affected By:
+; vivid-colors::*vstream*
+; If *VSTREAM* is unbound, VPRINT-STREAM is newly allocated.
+#?(values (boundp 'vivid-colors::*vstream*)
+	  (vprint-logical-block (var nil)
+            (boundp 'vivid-colors::*vstream*)))
+:values (nil t)
+
+; If *VSTREAM* is already bound, its section is modified.
+#?(let* ((vs (make-instance 'vivid-colors::vprint-stream))
+	 (vivid-colors::*vstream* vs)
+	 (sec (vivid-colors::section vivid-colors::*vstream*)))
+    (vprint-logical-block (var nil)
+      (values (eq vs vivid-colors::*vstream*)
+	      (eq sec (vivid-colors::section vivid-colors::*vstream*)))))
+:values (T NIL)
+
+;;;; Side-Effects:
+; Vivid notation is printed to <STREAM>.
+#?(with-output-to-string (out)
+    (vprint-logical-block (v out)
+      (princ "hoge" v)))
+=> "hoge"
+,:test equal
+
+;;;; Notes:
+
+;;;; Exceptional-Situations:
+
 (requirements-about VPRINT :doc-type function)
 
 ;;;; Description:
