@@ -17,7 +17,24 @@
   :pathname
   "src/"
   :components
-  ((:file "vivid-colors")))
+  ((:file "vivid-colors"))
+  :author "SATO Shinichi"
+  :license "MIT"
+  :description #.(concatenate 'string
+                              (string #\esc)
+                              "[31;4mColored"
+                              (string #\esc)
+                              "[0m "
+                              (string #\esc)
+                              "[32mobject"
+                              (string #\esc)
+                              "[0m "
+                              (string #\esc)
+                              "[34;5mprinter"
+                              (string #\esc)
+                              "[0m.")
+  :source-control (:git "git@github.com:hyotang666/vivid-colors")
+  :bug-tracker "https://github.com/hyotang666/vivid-colors/issues")
 
 ;;; These forms below are added by JINGOH.GENERATOR.
 ;; Ensure in ASDF for pretty printings.
