@@ -423,7 +423,7 @@
 (defun vprint-funcall (output form)
   (vprint-logical-block (output output :prefix "(" :suffix ")")
     (%vprint (first form) output)
-    (cond ((null (cdr form)) (return-from vprint-funcall (values)))
+    (cond ((null (cdr form)) (values))
           ((atom (cdr form))
            (write-char #\Space output)
            (write-char #\. output)
@@ -432,6 +432,7 @@
            (%vprint (cdr form) output))
           (t
            (write-char #\Space output)
+           (incf (view-length output))
            (vprint-indent :current 0 output)
            (vprint-newline :miser output)
            (vprint-list output (cdr form) nil :fill)))))
