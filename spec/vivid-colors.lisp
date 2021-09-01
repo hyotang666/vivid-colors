@@ -324,6 +324,44 @@
 
 ;;;; Notes:
 
+(requirements-about SET-VPRINT-DISPATCH :doc-type function)
+
+;;;; Description:
+
+#+syntax (SET-VPRINT-DISPATCH type function &optional (priority 0)) ; => result
+
+;;;; Arguments and Values:
+
+; type := (or cons symbol) i.e. type-specifier, otherwise implementation dependent condition.
+#?(set-vprint-dispatch "not type specifier" #'car) :signals condition
+#?(set-vprint-dispatch 'unknown #'car) :signals error
+
+; function := (or symbol function), otherwise implementation dependent condition.
+#?(set-vprint-dispatch 'null "not function designator") :signals condition
+
+; priority := real, otherwise implementation dependent condition.
+#?(set-vprint-dispatch 'null #'car "not real") :signals condition
+
+; result := (member t)
+
+;;;; Affected By:
+
+;;;; Side-Effects:
+; Modify *VPRINT-DISPATCH*
+#?(let ((*vprint-dispatch*))
+    (set-vprint-dispatch 'null 'car)
+    *vprint-dispatch*)
+:satisfies (lambda (result)
+	     (& (listp result)
+		(= 1 (length result))
+		(equalp (car result)
+			(vivid-colors::make-vprinter :type 'null
+						     :function 'car))))
+
+;;;; Notes:
+
+;;;; Exceptional-Situations:
+
 (requirements-about VPRINT :doc-type function)
 
 ;;;; Description:
