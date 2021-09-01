@@ -379,8 +379,9 @@
   #+clisp
   (progn (check-type function (or symbol function)) (check-type priority real))
   (assert (millet:type-specifier-p type))
-  (push (make-vprinter :type type :function function :priority priority)
-        *vprint-dispatch*)
+  (pushnew (make-vprinter :type type :function function :priority priority)
+           *vprint-dispatch*
+           :test #'equalp)
   t)
 
 (defun default-printer (output exp) (put exp output) (values))

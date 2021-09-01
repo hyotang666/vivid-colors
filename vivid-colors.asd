@@ -2,7 +2,7 @@
 (in-package :asdf)
 (defsystem "vivid-colors"
   :version
-  "1.2.7"
+  "1.2.8"
   :depends-on
   (
    "trivial-gray-streams"       ; Wrapper for gray-streams.
