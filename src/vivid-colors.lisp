@@ -205,12 +205,13 @@
                       (if (or (and rest
                                    (< *print-right-margin*
                                       (+ (view-length *vstream*)
-					 (compute-length thing)
+                                         (compute-length thing)
                                          (compute-length (car rest)))))
-			      (and *print-miser-width*
-				   (<= (- *print-right-margin* (start s))
-				       *print-miser-width*)
-				   (<= *print-right-margin* (compute-length s))))
+                              (and *print-miser-width*
+                                   (<= (- *print-right-margin* (start s))
+                                       *print-miser-width*)
+                                   (<= *print-right-margin*
+                                       (compute-length s))))
                           (let ((*trim-right-p* t))
                             (princ thing output)
                             (newline thing))
