@@ -255,7 +255,7 @@
   (vector-push-extend c (buffer s))
   c)
 
-#+ccl
+#+(or ccl clisp)
 (defmethod trivial-gray-streams:stream-line-column ((s vprint-stream)) nil)
 
 (declaim
@@ -316,14 +316,15 @@
  (ftype (function (newline-kind vprint-stream) (values)) vprint-newline))
 
 (defun vprint-newline (kind output)
-  (when (typep output 'vprint-stream)
-    (setf (tail (lines (section output)))
-            (make-line :contents (copy-seq (buffer output))
-                       :indent (indent (section output))
-                       :length (view-length output))
-          (tail (lines (section output))) kind
-          (fill-pointer (buffer output)) 0
-          (view-length output) 0))
+  #+clisp
+  (progn (check-type kind newline-kind) (check-type output vprint-stream))
+  (setf (tail (lines (section output)))
+          (make-line :contents (copy-seq (buffer output))
+                     :indent (indent (section output))
+                     :length (view-length output))
+        (tail (lines (section output))) kind
+        (fill-pointer (buffer output)) 0
+        (view-length output) 0)
   (values))
 
 (defmethod trivial-gray-streams:stream-finish-output ((s vprint-stream))
@@ -375,6 +376,8 @@
         set-vprint-dispatch))
 
 (defun set-vprint-dispatch (type function &optional (priority 0))
+  #+clisp
+  (progn (check-type function (or symbol function)) (check-type priority real))
   (assert (millet:type-specifier-p type))
   (push (make-vprinter :type type :function function :priority priority)
         *vprint-dispatch*)
