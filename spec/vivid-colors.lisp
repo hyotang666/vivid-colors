@@ -139,6 +139,83 @@
 :outputs "
 "
 
+; If :LINEAR is specified, newline is printed only if total length is greater than *print-right-margin*.
+#?(let ((*print-right-margin* 80)
+	(vivid-colors::*newlinep*))
+    (vprint-logical-block (out nil)
+      (put #\a out)
+      (vprint-newline :linear out)))
+:outputs "#\\a"
+
+#?(let ((*print-right-margin* 0)
+	(vivid-colors::*newlinep*))
+    (vprint-logical-block (out nil)
+      (put #\a out)
+      (vprint-newline :linear out)))
+:outputs "#\\a
+"
+
+; If :MISER is specified, newline is printed when section is over *print-right-margin* and over *print-miser-width*.
+; Case 1: Not over miser width.
+#?(let ((*print-right-margin* 80)
+	(*print-miser-width* 0))
+    (vprint-logical-block (out nil)
+      (put #\a out)
+      (vprint-newline :miser out)))
+:outputs "#\\a"
+
+; Case 2: Over miser width, but not over right margin.
+#?(let ((*print-right-margin* 80)
+	(*print-miser-width* 80))
+    (vprint-logical-block (out nil)
+      (put #\a out)
+      (vprint-newline :miser out)))
+:outputs "#\\a"
+
+; Case 3: Over miser width and over right margin.
+#?(let ((*print-right-margin* 0)
+	(*print-miser-width* 80))
+    (vprint-logical-block (out nil)
+      (put #\a out)
+      (vprint-newline :miser out)))
+:outputs "#\\a
+"
+
+; If :FILL is specified, newline is printed (a) when next is over *print-right-margin*.
+#?(let ((*print-right-margin* 5))
+    (vprint-logical-block (out nil)
+      (put #\a out)
+      (vprint-newline :fill out)
+      (put #\b out)))
+:outputs "#\\a
+#\\b"
+
+#?(let ((*print-right-margin* 80))
+    (vprint-logical-block (out nil)
+      (put #\a out)
+      (vprint-newline :fill out)
+      (put #\b out)))
+:outputs "#\\a#\\b"
+
+; (b) if over *print-right-margin*.
+#?(let ((*print-right-margin* 2))
+    (vprint-logical-block (out nil)
+      (put #\a out)
+      (vprint-newline :fill out)
+      (put #\b out)))
+:outputs "#\\a
+#\\b"
+
+; (c) if under miser printing.
+#?(let ((*print-right-margin* 0)
+	(*print-miser-width* 80))
+    (vprint-logical-block (out nil)
+      (put #\a out)
+      (vprint-newline :fill out)
+      (put #\b out)))
+:outputs "#\\a
+#\\b"
+
 (requirements-about VPRINT :doc-type function)
 
 ;;;; Description:
