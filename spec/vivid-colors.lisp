@@ -131,6 +131,14 @@
 
 ;;;; Exceptional-Situations:
 
+;;;; Tests:
+; If :MANDATORY specified, newline is printed even if the form is short.
+#?(let ((*print-right-margin* 80))
+    (vprint-logical-block (out nil)
+      (vprint-newline :mandatory out)))
+:outputs "
+"
+
 (requirements-about VPRINT :doc-type function)
 
 ;;;; Description:
