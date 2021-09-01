@@ -58,8 +58,7 @@
 
 (deftype indent () '(integer 0 #.most-positive-fixnum))
 
-(deftype newline-kind ()
-  '(member :mandatory :miser :fill :linear :mandatory nil))
+(deftype newline-kind () '(member :mandatory :miser :fill :linear nil))
 
 ;;; LINE
 
