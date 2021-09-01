@@ -150,16 +150,24 @@
        (incf sum (length (suffix thing)))
        sum))))
 
+(defun mandatory? (section)
+  (labels ((rec (section)
+             (doqueue ((thing kind) (lines section))
+               (when (eq :mandatory kind)
+                 (return-from mandatory? t))
+               (when (typep thing 'section)
+                 (rec thing)))))
+    (rec section)))
+
 (defmethod print-object ((s section) output)
   (let ((*trim-right-p*))
     (cond ((or *print-readably* *print-escape*) (call-next-method))
           (t
            (setf (start s) (view-length *vstream*))
            (cond
-             ((and (<= (compute-length s) *print-right-margin*)
-                   (doqueue ((nil kind) (lines s) t)
-                     (if (eq kind :mandatory)
-                         (return nil))))
+             ((and (not *newlinep*)
+                   (<= (compute-length s) *print-right-margin*)
+                   (not (mandatory? s)))
               (write-string (prefix s) output)
               (incf (view-length *vstream*) (length (prefix s)))
               (doqueue ((thing nil) (lines s))
