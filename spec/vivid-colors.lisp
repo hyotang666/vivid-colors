@@ -216,6 +216,42 @@
 :outputs "#\\a
 #\\b"
 
+(requirements-about VPRINT-INDENT :doc-type function)
+
+;;;; Description:
+
+#+syntax (VPRINT-INDENT kind indent output) ; => result
+
+;;;; Arguments and Values:
+
+; kind := (member :block :current), otherwise implementation dependent condition.
+#?(vprint-indent "not member" 0 (make-instance 'vivid-colors::vprint-stream))
+:signals condition
+
+; indent := (unsigned-byte 62), otherwise implementation dependent condition.
+#?(vprint-indient :block "not unsigned-byte" (make-instance 'vivid-colors::vprint-stream))
+:signals condition
+
+; output := vprint-stream, otherwise implementation dependent condition.
+#?(vprint-indent :blocl 0 "not vprint stream") :signals condition
+
+; result := (values)
+
+;;;; Affected By:
+; none
+
+;;;; Side-Effects:
+; Modify VPRINT-STREAM state.
+#?(let ((vs (make-instance 'vivid-colors::vprint-stream)))
+    (values (vivid-colors::indent (vivid-colors::section vs))
+	    (progn (vprint-indent :block 3 vs)
+		   (vivid-colors::indent (vivid-colors::section vs)))))
+:values (0 3)
+
+;;;; Notes:
+
+;;;; Exceptional-Situations:
+
 (requirements-about VPRINT :doc-type function)
 
 ;;;; Description:
