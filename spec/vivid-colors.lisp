@@ -95,6 +95,42 @@
 
 ;;;; Exceptional-Situations:
 
+(requirements-about VPRINT-NEWLINE :doc-type function)
+
+;;;; Description:
+
+#+syntax (VPRINT-NEWLINE kind output) ; => result
+
+;;;; Arguments and Values:
+
+; kind := (member :miser :fill :linear :mandatory nil), otherwise implementation dependent condition.
+#?(vprint-newline "not member" (make-instance 'vivid-colors::vprint-stream))
+:signals condition
+
+; output := vprint-stream, otherwise implementation dependent condition.
+#?(vprint-newline nil "not vprint stream") :signals condition
+
+; result := (VALUES)
+
+;;;; Affected By:
+; none
+
+;;;; Side-Effects:
+; Modify VPRINT-STREAM state.
+#?(let ((vs (make-instance 'vivid-colors::vprint-stream)))
+    (vprint-newline :linear vs)
+    (cdr (vivid-colors::queue-head (vivid-colors::lines (vivid-colors::section vs)))))
+:satisfies (lambda (queue)
+	     (& (listp queue)
+		(= 2 (length queue))
+		(equalp (first queue)
+			(vivid-colors::make-line :contents "" :length 0))
+		(eq :linear (second queue))))
+
+;;;; Notes:
+
+;;;; Exceptional-Situations:
+
 (requirements-about VPRINT :doc-type function)
 
 ;;;; Description:
