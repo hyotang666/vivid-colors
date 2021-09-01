@@ -23,18 +23,6 @@
   (defun non-printable-char-p (char)
     (values (gethash char non-printable-code-point))))
 
-(defun put-char (char output)
-  (write-char char output)
-  (incf (view-length output)))
-
-(defun put (object output &key color (key #'prin1-to-string))
-  (let ((notation (funcall key object)))
-    (if color
-        (with-color (color :stream output)
-          (write-string notation output))
-        (write-string notation output))
-    (incf (view-length output) (length notation))))
-
 ;;;; CONFIGURATIONS
 
 (defconstant +default-line-width+ 80)
@@ -193,6 +181,121 @@
                 (write-string (suffix s) output)
                 (incf (view-length *vstream*) (length (suffix s))))))))))
 
+;;;; VPRINT-STREAM
+
+(defclass vprint-stream (trivial-gray-streams:fundamental-character-output-stream)
+  ((output :type stream
+           :initarg :output
+           :reader output
+           :initform *standard-output*
+           :documentation "Underlying actual stream.")
+   (buffer :initform (make-array (or *print-right-margin* +default-line-width+)
+                                 :fill-pointer 0
+                                 :adjustable t
+                                 :element-type 'character)
+           :reader buffer
+           :documentation "Line buffer. Note this is never include pretty newline.")
+   (view-length :initarg :view-length
+                :initform 0
+                :accessor view-length
+                :type indent
+                :documentation "Current view length without indent, i.e. line length.")
+   (section :initarg :section
+            :type section
+            :accessor section
+            :documentation "Section block.")))
+
+(defmethod initialize-instance :after
+           ((o vprint-stream) &key (prefix "") (suffix "") &allow-other-keys)
+  (setf (section o) (make-section :prefix prefix :suffix suffix)))
+
+(defmethod trivial-gray-streams:stream-write-char
+           ((s vprint-stream) (c character))
+  ;; NOTE: Never (INCF (VIEW-LENGTH *VSTREAM*)) here
+  ;; because this method is used for escape sequence too.
+  (vector-push-extend c (buffer s))
+  c)
+
+(defun put-char (char output)
+  (write-char char output)
+  (incf (view-length output)))
+
+(defmacro with-color ((color &key stream) &body body)
+  (let ((output (gensym "OUTPUT")) (pre (gensym "CONTROL-SEQUENCE-PRE")))
+    `(let* ((cl-ansi-text:*color-mode* :8bit)
+            (,pre
+             (cl-ansi-text:make-color-string ,color
+                                             :effect :unset
+                                             :style :foreground))
+            (,output ,stream))
+       (when cl-ansi-text:*enabled*
+         (princ ,pre ,output)
+         (unwind-protect (progn ,@body (values))
+           (when cl-ansi-text:*enabled*
+             (princ cl-ansi-text:+reset-color-string+ ,output)))))))
+
+(defun put (object output &key color (key #'prin1-to-string))
+  (let ((notation (funcall key object)))
+    (if color
+        (with-color (color :stream output)
+          (write-string notation output))
+        (write-string notation output))
+    (incf (view-length output) (length notation))))
+
+(defun vprint-indent (kind indent output)
+  (let ((section (section output)))
+    (setf (indent section)
+            (ecase kind (:block indent) (:current (view-length output)))))
+  (values))
+
+(declaim
+ (ftype (function (newline-kind vprint-stream) (values)) vprint-newline))
+
+(defun vprint-newline (kind output)
+  (when (typep output 'vprint-stream)
+    (setf (tail (lines (section output)))
+            (make-line :contents (copy-seq (buffer output))
+                       :indent (indent (section output))
+                       :length (view-length output))
+          (tail (lines (section output))) kind
+          (fill-pointer (buffer output)) 0
+          (view-length output) 0))
+  (values))
+
+(defmethod trivial-gray-streams:stream-finish-output ((s vprint-stream))
+  (vprint-newline nil s)
+  (princ (section s) (output s)))
+
+;;;; DSL
+
+(defmacro vprint-logical-block
+          ((var <stream> &key (prefix "") (suffix "")) &body body)
+  (let ((o (gensym "OUTER-MOST-P")) (s (gensym "SECTION")))
+    `(let* ((,s
+             (when (boundp '*vstream*)
+               (section *vstream*)))
+            (,var
+             (if (boundp '*vstream*)
+                 (progn
+                  (vprint-newline nil *vstream*)
+                  (setf (section *vstream*)
+                          (make-section :prefix ,prefix :suffix ,suffix))
+                  *vstream*)
+                 (make-instance 'vprint-stream
+                                :output (ensure-output-stream ,<stream>)
+                                :prefix ,prefix
+                                :suffix ,suffix)))
+            (,o (not (boundp '*vstream*)))
+            (*vstream* ,var))
+       (unwind-protect (progn ,@body)
+         (if ,o
+             (finish-output ,var)
+             (progn
+              (vprint-newline nil *vstream*)
+              (setf (tail (lines ,s)) (section *vstream*)
+                    (tail (lines ,s)) nil
+                    (section *vstream*) ,s)))))))
+
 ;;;; VPRINTER
 
 (defstruct vprinter
@@ -235,109 +338,6 @@
                         (t
                          (error "Could not determine vprinters. ~S"
                                 vprinters))))))
-
-;;;; VPRINT-STREAM
-
-(defclass vprint-stream (trivial-gray-streams:fundamental-character-output-stream)
-  ((output :type stream
-           :initarg :output
-           :reader output
-           :initform *standard-output*
-           :documentation "Underlying actual stream.")
-   (buffer :initform (make-array (or *print-right-margin* +default-line-width+)
-                                 :fill-pointer 0
-                                 :adjustable t
-                                 :element-type 'character)
-           :reader buffer
-           :documentation "Line buffer. Note this is never include pretty newline.")
-   (view-length :initarg :view-length
-                :initform 0
-                :accessor view-length
-                :type indent
-                :documentation "Current view length without indent, i.e. line length.")
-   (section :initarg :section
-            :type section
-            :accessor section
-            :documentation "Section block.")))
-
-(defmethod initialize-instance :after
-           ((o vprint-stream) &key (prefix "") (suffix "") &allow-other-keys)
-  (setf (section o) (make-section :prefix prefix :suffix suffix)))
-
-(defmethod trivial-gray-streams:stream-write-char
-           ((s vprint-stream) (c character))
-  ;; NOTE: Never (INCF (VIEW-LENGTH *VSTREAM*)) here
-  ;; because this method is used for escape sequence too.
-  (vector-push-extend c (buffer s))
-  c)
-
-(defun vprint-indent (kind indent output)
-  (let ((section (section output)))
-    (setf (indent section)
-            (ecase kind (:block indent) (:current (view-length output)))))
-  (values))
-
-(declaim
- (ftype (function (newline-kind vprint-stream) (values)) vprint-newline))
-
-(defun vprint-newline (kind output)
-  (when (typep output 'vprint-stream)
-    (setf (tail (lines (section output)))
-            (make-line :contents (copy-seq (buffer output))
-                       :indent (indent (section output))
-                       :length (view-length output))
-          (tail (lines (section output))) kind
-          (fill-pointer (buffer output)) 0
-          (view-length output) 0))
-  (values))
-
-(defmethod trivial-gray-streams:stream-finish-output ((s vprint-stream))
-  (vprint-newline nil s)
-  (princ (section s) (output s)))
-
-;;;; DSL
-
-(defmacro with-color ((color &key stream) &body body)
-  (let ((output (gensym "OUTPUT")) (pre (gensym "CONTROL-SEQUENCE-PRE")))
-    `(let* ((cl-ansi-text:*color-mode* :8bit)
-            (,pre
-             (cl-ansi-text:make-color-string ,color
-                                             :effect :unset
-                                             :style :foreground))
-            (,output ,stream))
-       (when cl-ansi-text:*enabled*
-         (princ ,pre ,output)
-         (unwind-protect (progn ,@body (values))
-           (when cl-ansi-text:*enabled*
-             (princ cl-ansi-text:+reset-color-string+ ,output)))))))
-
-(defmacro vprint-logical-block
-          ((var <stream> &key (prefix "") (suffix "")) &body body)
-  (let ((o (gensym "OUTER-MOST-P")) (s (gensym "SECTION")))
-    `(let* ((,s
-             (when (boundp '*vstream*)
-               (section *vstream*)))
-            (,var
-             (if (boundp '*vstream*)
-                 (progn
-                  (vprint-newline nil *vstream*)
-                  (setf (section *vstream*)
-                          (make-section :prefix ,prefix :suffix ,suffix))
-                  *vstream*)
-                 (make-instance 'vprint-stream
-                                :output (ensure-output-stream ,<stream>)
-                                :prefix ,prefix
-                                :suffix ,suffix)))
-            (,o (not (boundp '*vstream*)))
-            (*vstream* ,var))
-       (unwind-protect (progn ,@body)
-         (if ,o
-             (finish-output ,var)
-             (progn
-              (vprint-newline nil *vstream*)
-              (setf (tail (lines ,s)) (section *vstream*)
-                    (tail (lines ,s)) nil
-                    (section *vstream*) ,s)))))))
 
 ;;;; PRINTERS
 
