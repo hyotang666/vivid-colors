@@ -1,6 +1,6 @@
 (defpackage :vivid-colors.spec
   (:use :cl :jingoh :vivid-colors)
-  (:import-from :vivid-colors "VPRINT"))
+  (:import-from :vivid-colors "VPRINT" "*PRINT-VIVID*"))
 (in-package :vivid-colors.spec)
 (setup :vivid-colors)
 

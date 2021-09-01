@@ -4,11 +4,12 @@
   (:use :cl)
   (:export ;;;; MAIN API
            "VPRINT" ; like CL:PPRINT
+           "*PRINT-VIVID*" ; like CL:*PRINT-PRETTY*
            )
   (:export ;;;; EXTEND
            "SET-VPRINT-DISPATCH" ; like CL:SET-PPRINT-DISPATCH.
            "*VPRINT-DISPATCH*" ; like CL:*PRINT-PPRINT-DISPATCH*.
-	   "COPY-VPRINT-DISPATCH" ; like CL:COPY-PPRINT-DISPATCH.
+           "COPY-VPRINT-DISPATCH" ; like CL:COPY-PPRINT-DISPATCH.
            )
   (:export ;;;; HELPER
            "PUT" ; like CL:WRITE.
@@ -50,6 +51,8 @@
 (defvar *newlinep* nil)
 
 (defvar *vstream*)
+
+(defparameter *print-vivid* t)
 
 ;;;; TYPES
 
@@ -255,12 +258,13 @@
              (cl-ansi-text:make-color-string ,color
                                              :effect :unset
                                              :style :foreground))
-            (,output ,stream))
+            (,output ,stream)
+            (cl-ansi-text:*enabled* *print-vivid*))
        (when cl-ansi-text:*enabled*
-         (princ ,pre ,output)
-         (unwind-protect (progn ,@body (values))
-           (when cl-ansi-text:*enabled*
-             (princ cl-ansi-text:+reset-color-string+ ,output)))))))
+         (princ ,pre ,output))
+       (unwind-protect (progn ,@body (values))
+         (when cl-ansi-text:*enabled*
+           (princ cl-ansi-text:+reset-color-string+ ,output))))))
 
 (declaim
  (ftype (function
