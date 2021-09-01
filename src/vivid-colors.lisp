@@ -165,9 +165,10 @@
           (t
            (setf (start s) (view-length *vstream*))
            (cond
-             ((and (not *newlinep*)
-                   (<= (compute-length s) *print-right-margin*)
-                   (not (mandatory? s)))
+             ((or (not *print-pretty*)
+                  (and (not *newlinep*)
+                       (<= (compute-length s) *print-right-margin*)
+                       (not (mandatory? s))))
               (write-string (prefix s) output)
               (incf (view-length *vstream*) (length (prefix s)))
               (doqueue ((thing nil) (lines s))
