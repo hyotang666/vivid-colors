@@ -362,6 +362,48 @@
 
 ;;;; Exceptional-Situations:
 
+(requirements-about COPY-VPRINT-DISPATCH :doc-type function)
+
+;;;; Description:
+
+#+syntax (COPY-VPRINT-DISPATCH &optional (vprint-dispatch *vprint-dispatch*))
+; => result
+
+;;;; Arguments and Values:
+; COPY-PPRINT-DISPATCH for VPRINT-STREAM.
+
+; vprint-dispatch := unspecified.
+; If not specified, copy the value of *VPRINT-DISPATCH*.
+#?(copy-vprint-dispatch)
+:satisfies (lambda (result)
+	     (& (equalp result *vprint-dispatch*)
+		(not (eq result *vprint-dispatch*))))
+
+; If specified NIL, default vprint-dispatch table is copied.
+#?(let ((temp *vprint-dispatch*)
+	(*vprint-dispatch*))
+    (values (equalp *vprint-dispatch* (copy-vprint-dispatch nil))
+	    (equalp temp (copy-vprint-dispatch nil))))
+:values (NIL T)
+
+; If vprint-dispatch is specified, such vprint-dispatch is copied.
+#?(let ((table (list (vivid-colors::make-vprinter :type 'null :function 'car))))
+    (values (eq table (copy-vprint-dispatch table))
+	    (equalp table (copy-vprint-dispatch table))))
+:values (NIL T)
+
+; result := unspecified.
+
+;;;; Affected By:
+; *VPRINT-DISPATCH*.
+
+;;;; Side-Effects:
+; none
+
+;;;; Notes:
+
+;;;; Exceptional-Situations:
+
 (requirements-about VPRINT :doc-type function)
 
 ;;;; Description:
