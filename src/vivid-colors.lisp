@@ -225,9 +225,14 @@
   (vector-push-extend c (buffer s))
   c)
 
+(declaim
+ (ftype (function (character vprint-stream) (values character &optional))
+        put-char))
+
 (defun put-char (char output)
   (write-char char output)
-  (incf (view-length output)))
+  (incf (view-length output))
+  char)
 
 (defmacro with-color ((color &key stream) &body body)
   (let ((output (gensym "OUTPUT")) (pre (gensym "CONTROL-SEQUENCE-PRE")))
@@ -243,6 +248,13 @@
            (when cl-ansi-text:*enabled*
              (princ cl-ansi-text:+reset-color-string+ ,output)))))))
 
+(declaim
+ (ftype (function
+         (t vprint-stream &key (:color cl-ansi-text:color-specifier)
+          (:key (or symbol function)))
+         (values t &optional))
+        put))
+
 (defun put
        (object output
         &key color (key #'prin1-to-string)
@@ -253,7 +265,12 @@
         (with-color (color :stream output)
           (write-string notation output))
         (write-string notation output))
-    (incf (view-length output) (length notation))))
+    (incf (view-length output) (length notation)))
+  object)
+
+(declaim
+ (ftype (function ((member :block :current) indent vprint-stream) (values))
+        vprint-indent))
 
 (defun vprint-indent (kind indent output)
   (let ((section (section output)))
@@ -317,6 +334,11 @@
             :type (or function symbol)
             :read-only t)
   (priority 0 :type real :read-only t))
+
+(declaim
+ (ftype (function ((or cons symbol) (or symbol function) &optional real)
+         (values (eql t) &optional))
+        set-vprint-dispatch))
 
 (defun set-vprint-dispatch (type function &optional (priority 0))
   (push (make-vprinter :type type :function function :priority priority)
@@ -413,7 +435,7 @@
 
 (defun vprint-macrocall (output form)
   (vprint-logical-block (output output :prefix "(" :suffix ")")
-    (%vprint (first form) output)
+    (vprint (first form) output t)
     (when (null (cdr form))
       (return-from vprint-macrocall (values)))
     (vprint-indent :block 3 output)
@@ -421,7 +443,7 @@
     (loop :repeat (count-pre-body-forms (millet:lambda-list (car form)))
           :for (elt . rest) :on (cdr form)
           :do (vprint-newline :miser output)
-              (%vprint elt output)
+              (vprint elt output t)
               (when (null rest)
                 (return-from vprint-macrocall (values)))
               (put-char #\Space output)
@@ -429,7 +451,7 @@
                    (vprint-newline :fill output)
                    ;; body
                    (loop :for (elt . rest) :on rest
-                         :do (%vprint elt output)
+                         :do (vprint elt output t)
                              (when (null rest)
                                (return-from vprint-macrocall (values)))
                              (put-char #\Space output)
@@ -437,13 +459,13 @@
 
 (defun vprint-funcall (output form)
   (vprint-logical-block (output output :prefix "(" :suffix ")")
-    (%vprint (first form) output)
+    (vprint (first form) output t)
     (cond ((null (cdr form)) (values))
           ((atom (cdr form))
            (put-char #\Space output)
            (put-char #\. output)
            (put-char #\Space output)
-           (%vprint (cdr form) output))
+           (vprint (cdr form) output t))
           (t
            (put-char #\Space output)
            (vprint-indent :current 0 output)
@@ -469,9 +491,9 @@
                         ((atom list)
                          (put-char #\. output)
                          (put-char #\Space output)
-                         (%vprint list output))
+                         (vprint list output t))
                         ((consp list)
-                         (%vprint (car list) output)
+                         (vprint (car list) output t)
                          (when (cdr list)
                            (put-char #\Space output)
                            (vprint-newline newline-kind output)
@@ -538,14 +560,7 @@
 
 ;;;; VPRINT
 
-(defun vprint (exp &optional output)
-  (let ((*print-right-margin* (or *print-right-margin* +default-line-width+))
-        (*newlinep*))
-    (vprint-logical-block (output output)
-      (%vprint exp output))))
-
-(defun %vprint (exp &optional output)
-  (funcall (coerce (vprint-dispatch exp) 'function) output exp))(declaim
+(declaim
  (ftype (function (t &optional stream boolean) (values null &optional)) vprint))
 
 (defun vprint (exp &optional output recursivep)
