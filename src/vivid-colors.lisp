@@ -193,8 +193,9 @@
                       (newline thing))
                     (:miser
                       (if (and *print-miser-width*
-                               (<= *print-miser-width*
-                                   (- *print-right-margin* (start s))))
+                               (<= (- *print-right-margin* (start s))
+                                   *print-miser-width*)
+                               (<= *print-right-margin* (compute-length s)))
                           (let ((*trim-right-p* t))
                             (princ thing output)
                             (newline thing))
@@ -202,9 +203,13 @@
                     (:fill
                       (if (or (and rest
                                    (< *print-right-margin*
-                                      (+ (start s)
+                                      (+ (view-length *vstream*)
+					 (compute-length thing)
                                          (compute-length (car rest)))))
-                              *newlinep*)
+			      (and *print-miser-width*
+				   (<= (- *print-right-margin* (start s))
+				       *print-miser-width*)
+				   (<= *print-right-margin* (compute-length s))))
                           (let ((*trim-right-p* t))
                             (princ thing output)
                             (newline thing))
