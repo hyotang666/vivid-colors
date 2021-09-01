@@ -41,6 +41,60 @@
 
 ;;;; Exceptional-Situations:
 
+(requirements-about PUT :doc-type function)
+
+;;;; Description:
+; WRITE for VPRINT-STREAM.
+
+#+syntax (PUT object output &key color (key #'prin1-to-string)) ; => result
+
+;;;; Arguments and Values:
+
+; object := t
+
+; output := vprint-stream, otherwise implementation dependent condition.
+#?(put t "not vprint stream") :signals condition
+
+; color := (or null cl-ansi-text:color-specifier), otherwise implementation dependent condition.
+#?(put t (make-instance 'vivid-colors::vprint-stream) :color "not color specifier")
+:signals condition
+
+; key := (or symbol function), otherwise implementation dependent condition.
+#?(put t (make-instance 'vivid-colors::vprint-stream) :key "not function designator")
+:signals condition
+; KEY is as (function (object) string), if return type is not string, an error is signaled.
+#?(put t (make-instance 'vivid-colors::vprint-stream) :key #'identity)
+:signals error
+
+; result := object
+
+;;;; Affected By:
+; none
+
+;;;; Side-Effects:
+; Modify VPRINT-STREAM state.
+#?(let ((vs (make-instance 'vivid-colors::vprint-stream)))
+    (values (copy-seq (vivid-colors::buffer vs))
+	    (vivid-colors::view-length vs)
+	    (put #\a vs)
+	    (copy-seq (vivid-colors::buffer vs))
+	    (vivid-colors::view-length vs)))
+:values ("" 0 #\a "#\\a" 3)
+
+#?(let ((vs (make-instance 'vivid-colors::vprint-stream)))
+    (values (copy-seq (vivid-colors::buffer vs))
+	    (vivid-colors::view-length vs)
+	    (put #\a vs :color cl-colors2:+red+)
+	    (copy-seq (vivid-colors::buffer vs))
+	    (vivid-colors::view-length vs)))
+:values ("" 0 #\a #.(let ((cl-ansi-text:*color-mode* :8bit))
+		      (cl-ansi-text:red  (prin1-to-string #\a))) 3)
+
+;;;; Notes:
+; Because above side effect, you should use PUT rather than WRITE for VPRINT-STREAM.
+
+;;;; Exceptional-Situations:
+
 (requirements-about VPRINT :doc-type function)
 
 ;;;; Description:
