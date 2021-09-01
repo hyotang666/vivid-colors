@@ -156,7 +156,10 @@
           (t
            (setf (start s) (view-length *vstream*))
            (cond
-             ((<= (compute-length s) *print-right-margin*)
+             ((and (<= (compute-length s) *print-right-margin*)
+                   (doqueue ((nil kind) (lines s) t)
+                     (if (eq kind :mandatory)
+                         (return nil))))
               (write-string (prefix s) output)
               (incf (view-length *vstream*) (length (prefix s)))
               (doqueue ((thing nil) (lines s))
@@ -176,11 +179,7 @@
                 (incf (view-length *vstream*) (length (prefix s)))
                 (doqueue ((thing newline-kind . rest) (lines s))
                   (mcase:emcase newline-kind newline-kind
-                    (:mandatory
-                      (let ((*trim-right-p* t))
-                        (princ thing output))
-                      (newline thing))
-                    (:linear
+                    ((:mandatory :linear)
                       (let ((*trim-right-p* t))
                         (princ thing output))
                       (newline thing))
