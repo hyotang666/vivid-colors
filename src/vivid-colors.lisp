@@ -111,11 +111,17 @@
   (lines (make-queue) :type queue :read-only t)
   (suffix "" :type simple-string :read-only t))
 
+(declaim
+ (ftype (function ((or line section))
+         (values (mod #.most-positive-fixnum) &optional))
+        compute-length))
+
 (defun compute-length (thing)
   (etypecase thing
     (line (line-length thing))
     (section
      (let ((sum 0))
+       (declare (type (mod #.most-positive-fixnum) sum))
        (incf sum (length (prefix thing)))
        (doqueue ((thing nil) (lines thing) (decf sum))
          (unless (and (typep thing 'line)
@@ -194,6 +200,7 @@
                                  :adjustable t
                                  :element-type 'character)
            :reader buffer
+           :type string
            :documentation "Line buffer. Note this is never include pretty newline.")
    (view-length :initarg :view-length
                 :initform 0
@@ -234,8 +241,12 @@
            (when cl-ansi-text:*enabled*
              (princ cl-ansi-text:+reset-color-string+ ,output)))))))
 
-(defun put (object output &key color (key #'prin1-to-string))
+(defun put
+       (object output
+        &key color (key #'prin1-to-string)
+        &aux (key (coerce key 'function)))
   (let ((notation (funcall key object)))
+    (declare (type simple-string notation))
     (if color
         (with-color (color :stream output)
           (write-string notation output))
@@ -521,4 +532,4 @@
       (%vprint exp output))))
 
 (defun %vprint (exp &optional output)
-  (funcall (vprint-dispatch exp) output exp))
+  (funcall (coerce (vprint-dispatch exp) 'function) output exp))
