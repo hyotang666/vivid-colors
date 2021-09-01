@@ -107,11 +107,9 @@
 	  (make-instance 'vivid-colors::vprint-stream
 			 :output *standard-output*
 			 :prefix ""
-			 :suffix ""
-			 :start (if (boundp 'vivid-colors::*vstream*)
-				  (vivid-colors::view-length vivid-colors::*vstream*)
-				  0))))
+			 :suffix "")))
     (vprint 'car)
+    (dev:peep vivid-colors::*vstream*)
     (vivid-colors::compute-length (vivid-colors::section vivid-colors::*vstream*)))
 => 3
 ,:stream nil

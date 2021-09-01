@@ -52,11 +52,27 @@
   (length (error "LENGTH is required.")
           :type (integer 0 #.array-total-size-limit)
           :read-only t)
+  ;; Actual indent.
   (indent 0 :type indent))
 
+(defvar *trim-right-p* nil)
+
 (defmethod print-object ((line line) output)
+  ;; NOTE: Indent is never printed.
   (cond ((or *print-readably* *print-escape*) (call-next-method))
-        (t (write-string (line-contents line) output))))
+        (t
+         (let ((contents (line-contents line)))
+           (write-string contents output
+                         :end (when *trim-right-p*
+                                (let ((p
+                                       (position-if-not #'non-printable-char-p
+                                                        contents
+                                                        :from-end t)))
+                                  (if p
+                                      (1+ p)
+                                      0))))
+           (incf (view-length *vstream*) (line-length line)))))
+  line)
 
 ;;; QUEUE
 
@@ -84,13 +100,13 @@
          :do (tagbody ,@body)
          :finally (return ,<return>)))
 
-(defun emptyp (queue) (null (car (queue-tail queue))))
-
 ;;; SECTION
 
 (defstruct (section (:conc-name nil))
-  (start (error "START is required.") :type indent)
+  ;; Set by PRINCed.
+  (start 0 :type indent)
   (prefix "" :type simple-string :read-only t)
+  ;; Current indent from start + prefix.
   (indent 0 :type indent)
   (lines (make-queue) :type queue :read-only t)
   (suffix "" :type simple-string :read-only t))
@@ -102,52 +118,68 @@
      (let ((sum 0))
        (incf sum (length (prefix thing)))
        (doqueue ((thing nil) (lines thing) (decf sum))
-         (incf sum (compute-length thing))
-         (incf sum))
+         (unless (and (typep thing 'line)
+                      (every #'non-printable-char-p (line-contents thing)))
+           (incf sum (compute-length thing))
+           (incf sum)))
        (incf sum (length (suffix thing)))
        sum))))
 
 (defmethod print-object ((s section) output)
-  (cond ((or *print-readably* *print-escape*) (call-next-method))
-        (t
-         (cond
-           ((<= (compute-length s) *print-right-margin*)
-            (write-string (prefix s) output)
-            (doqueue ((thing nil) (lines s))
-              (princ thing output))
-            (write-string (suffix s) output))
-           (t
-            (flet ((newline (thing)
-                     (setf *newlinep* t)
-                     (terpri output)
-                     (dotimes
-                         (x
-                          (+ (start s) (length (prefix s)) (indent s)
-                             (if (typep thing 'section)
-                                 (length (prefix thing))
-                                 0)
-                             (slot-value thing 'indent)))
-                       (write-char #\Space output))))
+  (let ((*trim-right-p*))
+    (cond ((or *print-readably* *print-escape*) (call-next-method))
+          (t
+           (setf (start s) (view-length *vstream*))
+           (cond
+             ((<= (compute-length s) *print-right-margin*)
               (write-string (prefix s) output)
-              (doqueue ((thing newline-kind . rest) (lines s))
-                (princ thing output)
-                (mcase:emcase newline-kind newline-kind
-                  (:mandatory (newline thing))
-                  (:linear (newline thing))
-                  (:miser
-                    (when (and *print-miser-width*
+              (incf (view-length *vstream*) (length (prefix s)))
+              (doqueue ((thing nil) (lines s))
+                (princ thing output))
+              (write-string (suffix s) output)
+              (incf (view-length *vstream*) (length (suffix s))))
+             (t
+              (setf *newlinep* t)
+              (flet ((newline (thing)
+                       (terpri output)
+                       (setf (view-length *vstream*)
+                               (+ (start s) (length (prefix s))
+                                  (slot-value thing 'indent)))
+                       (dotimes (x (view-length *vstream*))
+                         (write-char #\Space output))))
+                (write-string (prefix s) output)
+                (incf (view-length *vstream*) (length (prefix s)))
+                (doqueue ((thing newline-kind . rest) (lines s))
+                  (mcase:emcase newline-kind newline-kind
+                    (:mandatory
+                      (let ((*trim-right-p* t))
+                        (princ thing output))
+                      (newline thing))
+                    (:linear
+                      (let ((*trim-right-p* t))
+                        (princ thing output))
+                      (newline thing))
+                    (:miser
+                      (if (and *print-miser-width*
                                (<= *print-miser-width*
                                    (- *print-right-margin* (start s))))
-                      (newline thing)))
-                  (:fill
-                    (when (or (and rest
+                          (let ((*trim-right-p* t))
+                            (princ thing output)
+                            (newline thing))
+                          (princ thing output)))
+                    (:fill
+                      (if (or (and rest
                                    (< *print-right-margin*
                                       (+ (start s)
                                          (compute-length (car rest)))))
                               *newlinep*)
-                      (newline thing)))
-                  ((nil))))
-              (write-string (suffix s) output)))))))
+                          (let ((*trim-right-p* t))
+                            (princ thing output)
+                            (newline thing))
+                          (princ thing output)))
+                    ((nil) (princ thing output))))
+                (write-string (suffix s) output)
+                (incf (view-length *vstream*) (length (suffix s))))))))))
 
 ;;;; VPRINTER
 
@@ -221,13 +253,8 @@
             :documentation "Section block.")))
 
 (defmethod initialize-instance :after
-           ((o vprint-stream)
-            &key (start 0) (prefix "") (suffix "") &allow-other-keys)
-  (setf (section o)
-          (make-section :start (+ (length prefix) start)
-                        :prefix prefix
-                        :suffix suffix
-                        :indent (length prefix))))
+           ((o vprint-stream) &key (prefix "") (suffix "") &allow-other-keys)
+  (setf (section o) (make-section :prefix prefix :suffix suffix)))
 
 (defmethod trivial-gray-streams:stream-write-char
            ((s vprint-stream) (c character))
@@ -255,7 +282,6 @@
   (values))
 
 (defmethod trivial-gray-streams:stream-finish-output ((s vprint-stream))
-  (setq st s)
   (vprint-newline nil s)
   (princ (section s) (output s)))
 
@@ -271,43 +297,27 @@
             (,output ,stream))
        (when cl-ansi-text:*enabled*
          (princ ,pre ,output)
-         (unwind-protect
-             (progn
-              ,@body
-              (incf *print-right-margin*
-                    (+ (length ,pre)
-                       (length cl-ansi-text:+reset-color-string+)))
-              (values))
+         (unwind-protect (progn ,@body (values))
            (when cl-ansi-text:*enabled*
              (princ cl-ansi-text:+reset-color-string+ ,output)))))))
 
 (defmacro vprint-logical-block
           ((var <stream> &key (prefix "") (suffix "")) &body body)
-  (let ((o (gensym "OUTER-MOST-P"))
-        (s (gensym "SECTION"))
-        (p (gensym "PREFIX")))
+  (let ((o (gensym "OUTER-MOST-P")) (s (gensym "SECTION")))
     `(let* ((,s
              (when (boundp '*vstream*)
                (section *vstream*)))
-            (,p ,prefix)
             (,var
              (if (boundp '*vstream*)
                  (progn
+                  (vprint-newline nil *vstream*)
                   (setf (section *vstream*)
-                          (make-section :start (let ((section
-                                                      (section *vstream*)))
-                                                 (+ (start section)
-                                                    (length (prefix section))
-                                                    (view-length *vstream*)))
-                                        :prefix ,p
-                                        :suffix ,suffix
-                                        :indent (length ,p)))
+                          (make-section :prefix ,prefix :suffix ,suffix))
                   *vstream*)
                  (make-instance 'vprint-stream
                                 :output (ensure-output-stream ,<stream>)
                                 :prefix ,prefix
-                                :suffix ,suffix
-                                :start 0)))
+                                :suffix ,suffix)))
             (,o (not (boundp '*vstream*)))
             (*vstream* ,var))
        (unwind-protect (progn ,@body)
@@ -494,6 +504,32 @@
   (values))
 
 (set-vprint-dispatch 'pathname 'vprint-pathname)
+
+(defun vprint-structure (output structure)
+  (vprint-logical-block (output output :prefix "#S(" :suffix ")")
+    (let ((name (prin1-to-string (type-of structure))))
+      (with-color (cl-colors2:+limegreen+ :stream output)
+        (princ name output))
+      (incf (view-length output) (length name)))
+    (write-char #\Space output)
+    (incf (view-length output))
+    (vprint-indent :current 0 output)
+    (loop :for (slot . rest) :on (c2mop:class-slots (class-of structure))
+          :for name = (c2mop:slot-definition-name slot)
+          :do (let ((namestring (prin1-to-string name)))
+                (with-color (cl-colors2:+yellow+ :stream output)
+                  (write-char #\: output)
+                  (write-string namestring output))
+                (incf (view-length output) (1+ (length namestring))))
+              (write-char #\Space output)
+              (incf (view-length output))
+              (%vprint (slot-value structure name) output)
+              (when rest
+                (write-char #\Space output)
+                (incf (view-length output))
+                (vprint-newline :linear output)))))
+
+(set-vprint-dispatch 'structure-object 'vprint-structure)
 
 ;;;; VPRINT
 

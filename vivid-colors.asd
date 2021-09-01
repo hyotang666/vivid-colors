@@ -2,7 +2,7 @@
 (in-package :asdf)
 (defsystem "vivid-colors"
   :version
-  "0.31.0"
+  "0.32.0"
   :depends-on
   (
    "trivial-gray-streams"       ; Wrapper for gray-streams.
@@ -12,6 +12,7 @@
    "mcase"                      ; Control frow macro with case comprehensiveness checking.
    "millet"                     ; Wrapper for implementation dependent utilities.
    "lambda-fiddle"              ; Utilities for lambda list processing.
+   "closer-mop"                 ; Wrapper for Meta Object Protocols.
    )
   :pathname
   "src/"
