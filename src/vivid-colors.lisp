@@ -256,6 +256,9 @@
   (vector-push-extend c (buffer s))
   c)
 
+#+ccl
+(defmethod trivial-gray-streams:stream-line-column ((s vprint-stream)) nil)
+
 (declaim
  (ftype (function (character vprint-stream) (values character &optional))
         put-char))

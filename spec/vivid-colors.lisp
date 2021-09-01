@@ -95,7 +95,9 @@
 
 ;;;; Exceptional-Situations:
 
-(requirements-about VPRINT-NEWLINE :doc-type function)
+(requirements-about VPRINT-NEWLINE :doc-type function
+		    :around (let ((*print-pretty* t))
+			      (call-body)))
 
 ;;;; Description:
 
@@ -514,7 +516,9 @@
 => 3
 ,:stream nil
 
-(requirements-about *PRINT-VIVID* :doc-type variable)
+(requirements-about *PRINT-VIVID* :doc-type variable
+		    :around (let ((*print-pretty* t))
+			      (call-body)))
 
 ;;;; Description:
 
