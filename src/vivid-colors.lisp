@@ -557,6 +557,17 @@
 
 (set-vprint-dispatch 'list 'vprint-list)
 
+(defun vprint-vector (output vector)
+  (vprint-logical-block (output output :prefix "#(" :suffix ")")
+    (do ((i 0 (1+ i)))
+        (nil)
+      (vprint (aref vector i) output t)
+      (if (array-in-bounds-p vector (1+ i))
+          (progn (put-char #\Space output) (vprint-newline :fill output))
+          (return)))))
+
+(set-vprint-dispatch 'vector 'vprint-vector)
+
 (defun vprint-quote (output quote)
   (if (cddr quote)
       (vprint-list output quote)
