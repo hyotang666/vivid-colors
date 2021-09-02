@@ -297,21 +297,23 @@
   (put-char #\" output)
   nil)
 
+;;;; PUT
+
 (declaim
  (ftype (function
          (t vprint-stream &key (:color (or null cl-ansi-text:color-specifier))
-          (:key (or symbol function)))
+          (:args list) (:key (or symbol function)))
          (values t &optional))
         put))
 
 (defun put
        (object output
-        &key color (key #'prin1-to-string)
+        &key color (key #'prin1-to-string) args
         &aux (key (coerce key 'function)))
   (let ((notation (funcall key object)))
     (declare (type simple-string notation))
     (if color
-        (with-color (color :stream output)
+        (with-color (color :stream output :args args)
           (write-string notation output))
         (write-string notation output))
     (incf (view-length output) (length notation)))
