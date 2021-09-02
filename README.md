@@ -1,4 +1,4 @@
-# VIVID-COLORS 1.0.0
+# VIVID-COLORS 2.0.0
 ## What is this?
 Colored object printer.
 
