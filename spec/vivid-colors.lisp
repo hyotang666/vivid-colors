@@ -79,6 +79,13 @@
 ; result := null
 
 ;;;; Affected By:
+; *PRINT-VIVID*
+#?(let ((vs (make-instance 'vivid-colors::vprint-stream))
+	(*print-vivid* nil))
+    (put-strings '("1" ("2" #.cl-colors2:+red+)) vs)
+    (values (copy-seq (vivid-colors::buffer vs))
+	    (vivid-colors::view-length vs)))
+:values ("\"12\"" 4)
 
 ;;;; Side-Effects:
 ; Modify VPRINT-STREAM state.
