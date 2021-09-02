@@ -41,6 +41,65 @@
 
 ;;;; Exceptional-Situations:
 
+(requirements-about PUT-STRINGS :doc-type function)
+
+;;;; Description:
+; Similar with WRITE-STRING but for partially colored string.
+
+#+syntax (PUT-STRINGS strings output) ; => result
+
+;;;; Arguments and Values:
+
+; strings := list, otherwise implementation dependent condition.
+#?(put-strings "not list" (make-instance 'vivid-colors::vprint-stream))
+:signals condition
+; List element must be a string-specifier,
+; string-specifier := [ string | (cons string (cons cl-ansi-text:color-specifier (cons args))) ]
+; otherwise an error is signaled.
+#?(put-strings '(not string specifier) (make-instance 'vivid-colors::vprint-stream))
+:signals error
+#?(put-strings '((not-string #.cl-colors2:+red+)) (make-instance 'vivid-colors::vprint-stream))
+:signals error
+#?(put-strings '(("string" not-color-specifier)) (make-instance 'vivid-colors::vprint-stream))
+:signals error
+
+; args := [ :effect effect | :style style ]
+; To see details of effect eval (mapcar #'car cl-ansi-text::+term-effects+).
+; To see details of style eval (mapcar #'car cl-ansi-text::+text-style+).
+#?(put-strings '(("string" #.cl-colors2:+red+ :unknown-key 0)) (make-instance 'vivid-colors::vprint-stream))
+:signals error
+#?(put-strings '(("string" #.cl-colors2:+red+ :effect :no-such-effect)) (make-instance 'vivid-colors::vprint-stream))
+:signals error
+#?(put-strings '(("string" #.cl-colors2:+red+ :style :no-such-style)) (make-instance 'vivid-colors::vprint-stream))
+:signals error
+
+; output := vprint-stream, otherwise implementation dependent condition.
+#?(put-strings '("dummy") "not vprint stream") :signals condition
+
+; result := null
+
+;;;; Affected By:
+
+;;;; Side-Effects:
+; Modify VPRINT-STREAM state.
+#?(let ((vs (make-instance 'vivid-colors::vprint-stream)))
+    (put-strings '("1" ("2" #.cl-colors2:+red+)) vs)
+    (values (copy-seq (vivid-colors::buffer vs))
+	    (vivid-colors::view-length vs)))
+:values (#.(concatenate 'string
+			"\"1"
+			(let ((cl-ansi-text:*color-mode* :8bit))
+			  (cl-ansi-text:red "2"))
+			"\"")
+	 4)
+
+;;;; Notes:
+; For above side effect, you should use PUT-STRINGS instead of WRITE-STRING and/or CL-ANSI-TEXT:WITH-COLOR.
+
+; Actual printing is done when FINISH-OUTPUT is called.
+
+;;;; Exceptional-Situations:
+
 (requirements-about PUT :doc-type function)
 
 ;;;; Description:

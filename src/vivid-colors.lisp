@@ -14,6 +14,7 @@
   (:export ;;;; HELPER
            "PUT" ; like CL:WRITE.
            "PUT-CHAR" ; like CL:WRITE-CHAR.
+           "PUT-STRINGS" ; for partially colored string.
            "VPRINT-NEWLINE" ; like CL:PPRINT-NEWLINE.
            "VPRINT-INDENT" ; like CL:PPRINT-INDENT.
            "VPRINT-LOGICAL-BLOCK" ; like CL:PPRINT-LOGICAL-BLOCK.
@@ -262,13 +263,10 @@
   (incf (view-length output))
   char)
 
-(defmacro with-color ((color &key stream) &body body)
+(defmacro with-color ((color &key stream args) &body body)
   (let ((output (gensym "OUTPUT")) (pre (gensym "CONTROL-SEQUENCE-PRE")))
     `(let* ((cl-ansi-text:*color-mode* :8bit)
-            (,pre
-             (cl-ansi-text:make-color-string ,color
-                                             :effect :unset
-                                             :style :foreground))
+            (,pre (apply #'cl-ansi-text:make-color-string ,color ,args))
             (,output ,stream)
             (cl-ansi-text:*enabled* *print-vivid*))
        (when cl-ansi-text:*enabled*
@@ -276,6 +274,28 @@
        (unwind-protect (progn ,@body (values))
          (when cl-ansi-text:*enabled*
            (princ cl-ansi-text:+reset-color-string+ ,output))))))
+
+(declaim
+ (ftype (function (list vprint-stream) (values null &optional)) put-strings))
+
+(defun put-strings (strings output)
+  (put-char #\" output)
+  (loop :for string-specifier :in strings
+        :if (stringp string-specifier)
+          :do (write-string string-specifier output)
+              (incf (view-length output) (length string-specifier))
+        :else :if (typep string-specifier
+                         '(cons string (cons cl-ansi-text:color-specifier)))
+          :do (destructuring-bind
+                  (string color . args)
+                  string-specifier
+                (with-color (color :stream output :args args)
+                  (write-string string output))
+                (incf (view-length output) (length string)))
+        :else
+          :do (error "Unknown string-specifier ~S." string-specifier))
+  (put-char #\" output)
+  nil)
 
 (declaim
  (ftype (function
