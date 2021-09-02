@@ -43,7 +43,7 @@
 
 (defconstant +default-line-width+ 80)
 
-(defparameter *vprint-dispatch* nil)
+(defvar *vprint-dispatch* nil)
 
 (defvar *standard-vprint-dispatch*)
 
