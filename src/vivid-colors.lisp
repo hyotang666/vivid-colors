@@ -390,17 +390,19 @@
 
 (declaim
  (ftype (function ((or cons symbol) (or symbol function) &optional real)
-         (values (eql t) &optional))
+         (values null &optional))
         set-vprint-dispatch))
 
 (defun set-vprint-dispatch (type function &optional (priority 0))
   #+clisp
   (progn (check-type function (or symbol function)) (check-type priority real))
   (assert (millet:type-specifier-p type))
-  (pushnew (make-vprinter :type type :function function :priority priority)
-           *vprint-dispatch*
-           :test #'equalp)
-  t)
+  (setf *vprint-dispatch*
+          (delete type *vprint-dispatch* :test #'equal :key #'vprinter-type))
+  (when function
+    (push (make-vprinter :type type :function function :priority priority)
+          *vprint-dispatch*))
+  nil)
 
 (defun default-printer (output exp) (put exp output) (values))
 
