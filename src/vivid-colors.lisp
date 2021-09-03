@@ -166,6 +166,7 @@
            (setf (start s) (view-length *vstream*))
            (cond
              ((or (not *print-pretty*)
+                  (null *print-right-margin*)
                   (and (not *newlinep*)
                        (<= (compute-length s) *print-right-margin*)
                        (not (mandatory? s))))
