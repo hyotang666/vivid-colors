@@ -404,6 +404,11 @@
 
 (defun default-printer (output exp) (put exp output) (values))
 
+(declaim
+ (ftype (function (t &optional list)
+         (values (or symbol function) boolean &optional))
+        vprint-dispatch))
+
 (defun vprint-dispatch (exp &optional (dispatch-table *vprint-dispatch*))
   (loop :for vprinter :in dispatch-table
         :if (typep exp (vprinter-type vprinter))
@@ -411,9 +416,9 @@
         :finally (setf vprinters
                          (sort vprinters #'subtypep :key #'vprinter-type))
                  (return
-                  (cond ((null vprinters) 'default-printer)
+                  (cond ((null vprinters) (values 'default-printer nil))
                         ((null (cdr vprinters)) ; one element.
-                         (vprinter-function (car vprinters)))
+                         (values (vprinter-function (car vprinters)) t))
                         ((or (and (subtypep (vprinter-type (first vprinters))
                                             (vprinter-type (second vprinters)))
                                   (not
@@ -423,13 +428,13 @@
                              (not
                                (subtypep (vprinter-type (first vprinters))
                                          (vprinter-type (second vprinters)))))
-                         (vprinter-function (car vprinters)))
+                         (values (vprinter-function (car vprinters)) t))
                         ((< (vprinter-priority (first vprinters))
                             (vprinter-priority (second vprinters)))
-                         (vprinter-function (car vprinters)))
+                         (values (vprinter-function (car vprinters)) t))
                         (t
-                         (error "Could not determine vprinters. ~S"
-                                vprinters))))))
+                         (warn "Could not determine vprinters. ~S" vprinters)
+                         (values (vprinter-function (car vprinters)) t))))))
 
 (declaim
  (ftype (function (&optional (or null cons)) (values list &optional))
