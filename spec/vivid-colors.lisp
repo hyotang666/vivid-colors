@@ -606,7 +606,8 @@
 
 ;;;; Notes:
 ; This is control coloring only. Pretty printings is not its responds.
-#?(let ((*print-vivid* nil))
+#?(let ((*print-vivid* nil)
+	(*print-right-margin* 80))
     (vprint-logical-block (out nil)
       (vprint-newline :mandatory out)))
 :outputs "
