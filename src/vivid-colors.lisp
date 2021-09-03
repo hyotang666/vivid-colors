@@ -571,6 +571,22 @@
 
 (set-vprint-dispatch 'vector 'vprint-vector)
 
+(defun vprint-array (output array)
+  (labels ((rec (dims indices output)
+             (if (endp dims)
+                 (vprint (apply #'aref array (reverse indices)) output)
+                 (vprint-logical-block (output output :prefix "(" :suffix ")")
+                   (dotimes (x (car dims))
+                     (rec (cdr dims) (cons x indices) output)
+                     (when (< (1+ x) (car dims))
+                       (put-char #\Space output)))))))
+    (vprint-logical-block (output output
+                                  :prefix (format nil "#~DA"
+                                                  (array-rank array)))
+      (rec (array-dimensions array) nil output))))
+
+(set-vprint-dispatch 'array 'vprint-array)
+
 (defun vprint-quote (output quote)
   (if (cddr quote)
       (vprint-list output quote)
