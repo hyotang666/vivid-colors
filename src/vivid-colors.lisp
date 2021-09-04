@@ -193,11 +193,13 @@
               (incf (view-length *vstream*) (length (suffix s))))
              (t
               (setf *newlinep* t)
-              (labels ((newline (thing)
+              (labels ((newline (thing kind)
                          (terpri output)
                          (setf (view-length *vstream*)
                                  (+ (start s) (length (prefix s))
-                                    (slot-value thing 'indent)))
+                                    (if kind
+                                        0
+                                        (slot-value thing 'indent))))
                          (dotimes (x (view-length *vstream*))
                            (write-char #\Space output)))
                        (miserp ()
@@ -205,10 +207,10 @@
                               (<= (- *print-right-margin* (start s))
                                   *print-miser-width*)
                               (<= *print-right-margin* (compute-length s))))
-                       (put-line (thing)
+                       (put-line (thing &optional kind)
                          (let ((*trim-right-p* t))
                            (princ thing output)
-                           (newline thing))))
+                           (newline thing kind))))
                 (write-string (prefix s) output)
                 (incf (view-length *vstream*) (length (prefix s)))
                 (doqueue ((thing newline-kind . rest) (lines s))
@@ -216,7 +218,10 @@
                     ((:mandatory :linear) (put-line thing))
                     (:miser
                       (if (miserp)
-                          (put-line thing)
+                          (progn
+                           (setf (view-length *vstream*)
+                                   (+ (start s) (length (prefix s))))
+                           (put-line thing newline-kind))
                           (princ thing output)))
                     (:fill
                       (if (or (and rest
@@ -831,6 +836,7 @@
       (funcall (coerce (vprint-dispatch exp) 'function) output exp)
       (let ((*print-right-margin*
              (or *print-right-margin* +default-line-width+))
+            (*print-miser-width* (or *print-miser-width* 60))
             (*newlinep*))
         (vprint-logical-block (output nil)
           (funcall (coerce (vprint-dispatch exp) 'function) output exp)))))
