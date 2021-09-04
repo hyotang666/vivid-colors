@@ -58,7 +58,9 @@
 
 (defconstant +default-line-width+ 80)
 
-(defvar *vprint-dispatch* nil)
+(declaim (type vprint-dispatch *vprint-dispatch* *standard-vprint-dispatch*))
+
+(defvar *vprint-dispatch* (make-vprint-dispatch))
 
 (defvar *standard-vprint-dispatch*)
 
@@ -524,6 +526,9 @@
 
 ;;;; VPRINTER
 
+(defstruct (vprint-dispatch (:copier nil))
+  (table (make-hash-table :test #'equal) :type hash-table :read-only t))
+
 (defstruct vprinter
   (type (error "TYPE is required.") :read-only t)
   (function (error "FUNCTION is required.")
@@ -532,31 +537,34 @@
   (priority 0 :type real :read-only t))
 
 (declaim
- (ftype (function ((or cons symbol) (or symbol function) &optional real)
+ (ftype (function
+         ((or cons symbol) (or symbol function) &optional real vprint-dispatch)
          (values null &optional))
         set-vprint-dispatch))
 
-(defun set-vprint-dispatch (type function &optional (priority 0))
+(defun set-vprint-dispatch
+       (type function &optional (priority 0) (table *vprint-dispatch*))
   #+clisp
   (progn (check-type function (or symbol function)) (check-type priority real))
   (assert (millet:type-specifier-p type))
-  (setf *vprint-dispatch*
-          (delete type *vprint-dispatch* :test #'equal :key #'vprinter-type))
+  (remhash type (vprint-dispatch-table table))
   (when function
-    (push (make-vprinter :type type :function function :priority priority)
-          *vprint-dispatch*))
+    (setf (gethash type (vprint-dispatch-table table))
+            (make-vprinter :type type :function function :priority priority)))
   nil)
 
 (defun default-printer (output exp) (put exp output) (values))
 
 (declaim
- (ftype (function (t &optional list)
+ (ftype (function (t &optional vprint-dispatch)
          (values (or symbol function) boolean &optional))
         vprint-dispatch))
 
-(defun vprint-dispatch (exp &optional (dispatch-table *vprint-dispatch*))
-  (loop :for vprinter :in dispatch-table
-        :if (typep exp (vprinter-type vprinter))
+(defun vprint-dispatch (exp &optional (vprint-dispatch *vprint-dispatch*))
+  (loop :for key-type :being :each :hash-key :of
+             (vprint-dispatch-table vprint-dispatch) :using
+             (:hash-value vprinter)
+        :if (typep exp key-type)
           :collect vprinter :into vprinters
         :finally (setf vprinters
                          (sort vprinters #'subtypep :key #'vprinter-type))
@@ -582,13 +590,16 @@
                          (values (vprinter-function (car vprinters)) t))))))
 
 (declaim
- (ftype (function (&optional (or null cons)) (values list &optional))
+ (ftype (function (&optional (or null vprint-dispatch))
+         (values vprint-dispatch &optional))
         copy-vprint-dispatch))
 
 (defun copy-vprint-dispatch (&optional (vprint-dispatch *vprint-dispatch*))
-  (if vprint-dispatch
-      (copy-seq vprint-dispatch)
-      (copy-seq *standard-vprint-dispatch*)))
+  (make-vprint-dispatch :table (alexandria:copy-hash-table
+                                 (if vprint-dispatch
+                                     (vprint-dispatch-table vprint-dispatch)
+                                     (vprint-dispatch-table
+                                       *standard-vprint-dispatch*)))))
 
 ;;;; PRINTERS
 

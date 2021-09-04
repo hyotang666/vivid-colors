@@ -452,7 +452,12 @@
 
 ;;;; Description:
 
-#+syntax (SET-VPRINT-DISPATCH type function &optional (priority 0)) ; => result
+#+syntax (SET-VPRINT-DISPATCH type
+           function
+           &optional
+           (priority 0)
+           (table *vprint-dispatch*))
+; => result
 
 ;;;; Arguments and Values:
 
@@ -466,19 +471,22 @@
 ; priority := real, otherwise implementation dependent condition.
 #?(set-vprint-dispatch 'null #'car "not real") :signals condition
 
-; result := (member t)
+; table := vprint-dispatch, otherwise implementation dependent condition.
+#?(set-vprint-dispatch 'null #'car 0 "not vprint dispatch") :signals condition
+
+; result := null
 
 ;;;; Affected By:
 
 ;;;; Side-Effects:
 ; Modify *VPRINT-DISPATCH*
-#?(let ((*vprint-dispatch*))
+#?(let ((*vprint-dispatch* (vivid-colors::make-vprint-dispatch)))
     (set-vprint-dispatch 'null 'car)
     *vprint-dispatch*)
 :satisfies (lambda (result)
-	     (& (listp result)
-		(= 1 (length result))
-		(equalp (car result)
+	     (& (typep result 'vivid-colors::vprint-dispatch)
+		(= 1 (hash-table-count (vivid-colors::vprint-dispatch-table result)))
+		(equalp (gethash 'null (vivid-colors::vprint-dispatch-table result))
 			(vivid-colors::make-vprinter :type 'null
 						     :function 'car))))
 
@@ -505,13 +513,15 @@
 
 ; If specified NIL, default vprint-dispatch table is copied.
 #?(let ((temp *vprint-dispatch*)
-	(*vprint-dispatch*))
+	(*vprint-dispatch* (vivid-colors::make-vprint-dispatch)))
     (values (equalp *vprint-dispatch* (copy-vprint-dispatch nil))
 	    (equalp temp (copy-vprint-dispatch nil))))
 :values (NIL T)
 
 ; If vprint-dispatch is specified, such vprint-dispatch is copied.
-#?(let ((table (list (vivid-colors::make-vprinter :type 'null :function 'car))))
+#?(let ((table (vivid-colors::make-vprint-dispatch
+		 :table (alexandria:plist-hash-table
+			  (list 'null (vivid-colors::make-vprinter :type 'null :function 'car))))))
     (values (eq table (copy-vprint-dispatch table))
 	    (equalp table (copy-vprint-dispatch table))))
 :values (NIL T)
