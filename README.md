@@ -36,6 +36,8 @@ SBCL
 ### ECL
 Currently we stop to support ECL due to its `SUBTYPEP` behavior.
 
+[The issue reported here.](https://gitlab.com/embeddable-common-lisp/ecl/-/issues/520)
+
 ```lisp
 #+ecl
 (subtypep '(cons (member quote)) 'list)
