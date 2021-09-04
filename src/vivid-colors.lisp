@@ -823,6 +823,24 @@
 
 (set-vprint-dispatch '(cons (member let let*)) 'vprint-let)
 
+(defun vprint-block (output exp)
+  (vprint-logical-block (output exp :prefix "(" :suffix ")")
+    (vprint (vprint-pop) output t) ; operator
+    (vprint-exit-if-list-exhausted)
+    (put-char #\Space output)
+    (vprint-indent :block 1 output)
+    (vprint-newline :miser output)
+    (loop (vprint (vprint-pop) output t)
+          (vprint-exit-if-list-exhausted)
+          (put-char #\Space output)
+          (vprint-newline :linear output))))
+
+(set-vprint-dispatch
+  '(cons
+     (member block unwind-protect prog1 return-from catch throw eval-when
+             multiple-value-call multiple-value-prog1))
+  'vprint-block)
+
 (setq *standard-vprint-dispatch* (copy-vprint-dispatch))
 
 ;;;; VPRINT
