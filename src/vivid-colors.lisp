@@ -938,7 +938,7 @@
 (declaim
  (ftype (function (t &optional stream boolean) (values null &optional)) vprint))
 
-(defun vprint (exp &optional output recursivep)
+(defun vprint (exp &optional (output *standard-output*) recursivep)
   (if recursivep
       (funcall (coerce (vprint-dispatch exp) 'function) output exp)
       (let ((*print-right-margin*
