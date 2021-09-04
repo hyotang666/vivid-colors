@@ -638,10 +638,43 @@
 => 3
 ,:stream nil
 
+; LET form.
+#?(vprint '(let))
+:outputs "(LET)"
+
+#?(vprint '(let . dot))
+:outputs "(LET . DOT)"
+
+#?(vprint '(let atom))
+:outputs "(LET ATOM)"
+
+#?(vprint '(let nil))
+:outputs "(LET ())"
+
+#?(vprint '(let (atom)))
+:outputs "(LET (ATOM))"
+
+#?(vprint '(let (atom . dot)))
+:outputs "(LET (ATOM . DOT))"
+
+#?(vprint '(let ((atom))))
+:outputs "(LET ((ATOM)))"
+
+#?(vprint '(let ((atom . dot))))
+:outputs "(LET ((ATOM . DOT)))"
+
+#?(vprint '(let ((too many elt))))
+:outputs "(LET ((TOO MANY ELT)))"
+
+#?(vprint '(let ((too many elt with . dot))))
+:outputs "(LET ((TOO MANY ELT WITH . DOT)))"
+
+#?(vprint '(let () . dot))
+:outputs "(LET () . DOT)"
+
 (requirements-about *PRINT-VIVID* :doc-type variable
 		    :around (let ((*print-pretty* t))
 			      (call-body)))
-
 ;;;; Description:
 
 ;;;; Value type is BOOLEAN

@@ -777,6 +777,48 @@
 
 (set-vprint-dispatch 'structure-object 'vprint-structure)
 
+(defun vprint-let (output exp)
+  (vprint-logical-block (output exp :prefix "(" :suffix ")")
+    (vprint (vprint-pop) output t) ; operator.
+    (vprint-exit-if-list-exhausted)
+    (put-char #\Space output)
+    (vprint-indent :current 0 output)
+    (vprint-newline :miser output)
+    ;; Binds.
+    (vprint-logical-block (output (vprint-pop) :prefix "(" :suffix ")")
+      (vprint-exit-if-list-exhausted)
+      (loop :for bind = (vprint-pop)
+            :if (atom bind)
+              :do (vprint bind output t)
+                  (vprint-exit-if-list-exhausted)
+                  (put-char #\Space output)
+            :else
+              :do (vprint-logical-block (output (the list bind)
+                                                :prefix "("
+                                                :suffix ")")
+                    (vprint-exit-if-list-exhausted)
+                    (vprint (vprint-pop) output t) ; var
+                    (vprint-exit-if-list-exhausted)
+                    (put-char #\Space output)
+                    (vprint-newline :miser output)
+                    (loop (vprint (vprint-pop) output t) ; form
+                          (vprint-exit-if-list-exhausted)
+                          (put-char #\Space output)
+                          (vprint-newline :linear output)))
+                  (vprint-exit-if-list-exhausted)
+                  (put-char #\Space output)))
+    ;; Body
+    (vprint-exit-if-list-exhausted)
+    (put-char #\Space output)
+    (vprint-indent :block 1 output)
+    (vprint-newline :linear output)
+    (loop (vprint (vprint-pop) output t)
+          (vprint-exit-if-list-exhausted)
+          (put-char #\Space output)
+          (vprint-newline :linear output))))
+
+(set-vprint-dispatch '(cons (member let let*)) 'vprint-let)
+
 (setq *standard-vprint-dispatch* (copy-vprint-dispatch))
 
 ;;;; VPRINT
