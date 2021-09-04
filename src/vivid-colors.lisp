@@ -646,34 +646,35 @@
          (values (or symbol function) boolean &optional))
         vprint-dispatch))
 
-(defun vprint-dispatch (exp &optional (vprint-dispatch *vprint-dispatch*))
+(defun vprinters (exp &optional (vprint-dispatch *vprint-dispatch*))
+  ;; For debug use.
   (loop :for key-type :being :each :hash-key :of
              (vprint-dispatch-table vprint-dispatch) :using
              (:hash-value vprinter)
         :if (typep exp key-type)
-          :collect vprinter :into vprinters
-        :finally (setf vprinters
-                         (sort vprinters #'subtypep :key #'vprinter-type))
-                 (return
-                  (cond ((null vprinters) (values 'default-printer nil))
-                        ((null (cdr vprinters)) ; one element.
-                         (values (vprinter-function (car vprinters)) t))
-                        ((or (and (subtypep (vprinter-type (first vprinters))
-                                            (vprinter-type (second vprinters)))
-                                  (not
-                                    (subtypep
-                                      (vprinter-type (second vprinters))
-                                      (vprinter-type (first vprinters)))))
-                             (not
-                               (subtypep (vprinter-type (first vprinters))
-                                         (vprinter-type (second vprinters)))))
-                         (values (vprinter-function (car vprinters)) t))
-                        ((< (vprinter-priority (first vprinters))
-                            (vprinter-priority (second vprinters)))
-                         (values (vprinter-function (car vprinters)) t))
-                        (t
-                         (warn "Could not determine vprinters. ~S" vprinters)
-                         (values (vprinter-function (car vprinters)) t))))))
+          :collect vprinter))
+
+(defun vprint-dispatch (exp &optional (vprint-dispatch *vprint-dispatch*))
+  (let ((vprinters (sort (vprinters exp vprint-dispatch)
+			 #'subtypep :key #'vprinter-type)))
+    (cond ((null vprinters) (values 'default-printer nil))
+          ((null (cdr vprinters)) ; one element.
+           (values (vprinter-function (car vprinters)) t))
+          ((or (and (subtypep (vprinter-type (first vprinters))
+                              (vprinter-type (second vprinters)))
+                    (not
+                      (subtypep (vprinter-type (second vprinters))
+                                (vprinter-type (first vprinters)))))
+               (not
+                 (subtypep (vprinter-type (first vprinters))
+                           (vprinter-type (second vprinters)))))
+           (values (vprinter-function (car vprinters)) t))
+          ((< (vprinter-priority (first vprinters))
+              (vprinter-priority (second vprinters)))
+           (values (vprinter-function (car vprinters)) t))
+          (t
+           (warn "Could not determine vprinters. ~S" vprinters)
+           (values (vprinter-function (car vprinters)) t)))))
 
 (declaim
  (ftype (function (&optional (or null vprint-dispatch))
