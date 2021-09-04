@@ -598,15 +598,17 @@
   `(let ((*vprint-dispatch*
           ,(let ((merge (find :merge clause+ :key #'car)))
              (if merge
-                 `(merge-vprint-dispatch
-                    ,@(mapcar (lambda (x) `(find-vprint-dispatch ',x))
-                              (cdr merge)))
+                 `(merge-vprint-dispatch (make-vprint-dispatch :name ',name)
+                                         ,@(mapcar
+                                             (lambda (x)
+                                               `(find-vprint-dispatch ',x))
+                                             (cdr merge)))
                  `(make-vprint-dispatch :name ',name)))))
      ,@(loop :for clause :in clause+
              :if (eq :set (car clause))
                :collect `(set-vprint-dispatch ,@(cdr clause)))
      (store-vprint-dispatch ',name *vprint-dispatch*)
-     (setf (vprint-dispatch-name *vprint-dispatch*) ',name)))
+     ',name))
 
 (defmacro in-vprint-dispatch (name)
   `(setq *vprint-dispatch*
