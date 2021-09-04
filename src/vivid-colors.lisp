@@ -366,7 +366,6 @@
   (values))
 
 (defmethod trivial-gray-streams:stream-finish-output ((s vprint-stream))
-  (setq st s)
   (vprint-newline nil s)
   (princ (section s) (output s)))
 
