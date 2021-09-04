@@ -5,6 +5,10 @@
 (in-package :vivid-colors.spec)
 (setup :vivid-colors)
 
+(requirements-about common-lisp)
+
+#?(subtypep '(cons (member quote)) 'list) => T
+
 (requirements-about PUT-CHAR :doc-type function)
 
 ;;;; Description:
