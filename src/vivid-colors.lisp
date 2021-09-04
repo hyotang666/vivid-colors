@@ -11,6 +11,17 @@
            "*VPRINT-DISPATCH*" ; like CL:*PRINT-PPRINT-DISPATCH*.
            "COPY-VPRINT-DISPATCH" ; like CL:COPY-PPRINT-DISPATCH.
            )
+  (:export ;;;; EXTEND similar with named-readtables.
+           ;;;; MAIN API
+           "DEFINE-VPRINT-DISPATCH" ; like CL:DEFPACKAGE.
+           "IN-VPRINT-DISPATCH" ; like CL:IN-PACKAGE.
+           ;;;; For Hackers.
+           "FIND-VPRINT-DISPATCH" ; like CL:FIND-PACKAGE.
+           "STORE-VPRINT-DISPATCH" ; like NAMED-READTABLES:REGISTER-READTABLE.
+           "MERGE-VPRINT-DISPATCH" ; like
+                                   ; NAMED-READTABLES:MERGE-READTABLES-INTO.
+           "LIST-ALL-VPRINT-DISPATCHES" ; like CL:LIST-ALL-PACKAGES
+           )
   (:export ;;;; HELPER
            "PUT" ; like CL:WRITE.
            "PUT-CHAR" ; like CL:WRITE-CHAR.
@@ -60,9 +71,11 @@
 
 (declaim (type vprint-dispatch *vprint-dispatch* *standard-vprint-dispatch*))
 
-(defvar *vprint-dispatch* (make-vprint-dispatch))
+(defvar *vprint-dispatch*)
 
 (defvar *standard-vprint-dispatch*)
+
+(defvar *vprint-dispatch-repository* (make-hash-table :test #'eq))
 
 (declaim (type boolean *newlinep*))
 
@@ -527,7 +540,79 @@
 ;;;; VPRINTER
 
 (defstruct (vprint-dispatch (:copier nil))
+  (name (error "NAME is required.") :type symbol)
   (table (make-hash-table :test #'equal) :type hash-table :read-only t))
+
+(defmethod print-object ((this vprint-dispatch) output)
+  (cond (*print-readably* (call-next-method))
+        (t
+         (print-unreadable-object (this output :type t :identity nil)
+           (funcall (formatter "~W entry ~D") output
+                    (vprint-dispatch-name this)
+                    (hash-table-count (vprint-dispatch-table this)))))))
+
+(declaim
+ (ftype (function (symbol) (values (or null vprint-dispatch) &optional))
+        find-vprint-dispatch))
+
+(defun find-vprint-dispatch (name)
+  (values (gethash name *vprint-dispatch-repository*)))
+
+(declaim
+ (ftype (function (symbol vprint-dispatch) (values vprint-dispatch &optional))
+        store-vprint-dispatch))
+
+(defun store-vprint-dispatch (name vprint-dispatch)
+  (setf (gethash name *vprint-dispatch-repository*) vprint-dispatch))
+
+(declaim
+ (ftype (function (vprint-dispatch &rest vprint-dispatch)
+         (values vprint-dispatch &optional))
+        merge-vprint-dispatch))
+
+(defun merge-vprint-dispatch (vprint-dispatch &rest rest)
+  (let ((vprint-dispatch (copy-vprint-dispatch vprint-dispatch)))
+    (dolist (dispatch rest vprint-dispatch)
+      (loop :for key-type :being :each :hash-key :of
+                 (vprint-dispatch-table dispatch) :using (:hash-value vprinter)
+            :if (gethash key-type (vprint-dispatch-table vprint-dispatch))
+              :do (restart-case (error "Duplicates dispatch key.")
+                    (replace ()
+                        :report "Replace by new one."
+                      (setf (gethash key-type
+                                     (vprint-dispatch-table vprint-dispatch))
+                              vprinter))
+                    (ignore () :report "Ignore new one."))
+            :else
+              :do (setf (gethash key-type
+                                 (vprint-dispatch-table vprint-dispatch))
+                          vprinter)))))
+
+(defun list-all-vprint-dispatches ()
+  (alexandria:hash-table-keys *vprint-dispatch-repository*))
+
+(defmacro define-vprint-dispatch (name &body clause+)
+  ;; Trivial syntax check.
+  (check-type name symbol)
+  (assert (<= (count :merge clause+ :key #'car) 1))
+  (assert (every (lambda (clause) (find (car clause) '(:merge :set))) clause+))
+  `(let ((*vprint-dispatch*
+          ,(let ((merge (find :merge clause+ :key #'car)))
+             (if merge
+                 `(merge-vprint-dispatch
+                    ,@(mapcar (lambda (x) `(find-vprint-dispatch ',x))
+                              (cdr merge)))
+                 `(make-vprint-dispatch :name ',name)))))
+     ,@(loop :for clause :in clause+
+             :if (eq :set (car clause))
+               :collect `(set-vprint-dispatch ,@(cdr clause)))
+     (store-vprint-dispatch ',name *vprint-dispatch*)
+     (setf (vprint-dispatch-name *vprint-dispatch*) ',name)))
+
+(defmacro in-vprint-dispatch (name)
+  `(setq *vprint-dispatch*
+           (or (find-vprint-dispatch ',name)
+               (error "Missing VPRINT-DISPATCH named ~S." ',name))))
 
 (defstruct vprinter
   (type (error "TYPE is required.") :read-only t)
@@ -595,11 +680,14 @@
         copy-vprint-dispatch))
 
 (defun copy-vprint-dispatch (&optional (vprint-dispatch *vprint-dispatch*))
-  (make-vprint-dispatch :table (alexandria:copy-hash-table
+  (make-vprint-dispatch :name (if vprint-dispatch
+                                  (vprint-dispatch-name vprint-dispatch)
+                                  :standard)
+                        :table (alexandria:copy-hash-table
                                  (if vprint-dispatch
                                      (vprint-dispatch-table vprint-dispatch)
                                      (vprint-dispatch-table
-                                       *standard-vprint-dispatch*)))))
+                                       (find-vprint-dispatch :standard))))))
 
 ;;;; PRINTERS
 
@@ -607,25 +695,15 @@
   (put keyword output :color cl-colors2:+yellow+)
   (values))
 
-(set-vprint-dispatch 'keyword 'vprint-keyword)
-
 (defun vprint-real (output real)
   (put real output :color cl-colors2:+violet+)
   (values))
 
-(set-vprint-dispatch 'real 'vprint-real)
-
 (defun vprint-symbol (output symbol) (put symbol output) (values))
-
-(set-vprint-dispatch '(and symbol (not keyword)) 'vprint-symbol)
-
-(set-vprint-dispatch 'null 'vprint-symbol)
 
 (defun vprint-string (output string)
   (put string output :color cl-colors2:+tomato+)
   (values))
-
-(set-vprint-dispatch 'string 'vprint-string)
 
 (defun vprint-char (output char)
   (put char output
@@ -636,7 +714,38 @@
                   (prin1-to-string c))))
   (values))
 
-(set-vprint-dispatch 'character 'vprint-char)
+(defun vprint-pathname (output pathname)
+  (vprint-logical-block (output nil :prefix "#P")
+    (put pathname output
+         :color cl-colors2:+tomato+
+         :key (lambda (p) (prin1-to-string (namestring p)))))
+  (values))
+
+(defun vprint-structure (output structure)
+  (vprint-logical-block (output nil :prefix "#S(" :suffix ")")
+    (put (type-of structure) output :color cl-colors2:+limegreen+)
+    (put-char #\Space output)
+    (vprint-indent :current 0 output)
+    (loop :for (slot . rest) :on (c2mop:class-slots (class-of structure))
+          :for name = (c2mop:slot-definition-name slot)
+          :do (put name output
+                   :color cl-colors2:+yellow+
+                   :key (lambda (n) (format nil ":~S" n)))
+              (put-char #\Space output)
+              (vprint (slot-value structure name) output t)
+              (when rest
+                (put-char #\Space output)
+                (vprint-newline :linear output)))))
+
+(define-vprint-dispatch :vivid-print-dispatch
+  (:set 'keyword 'vprint-keyword)
+  (:set 'real 'vprint-real)
+  (:set '(and symbol (not keyword)) 'vprint-symbol)
+  (:set 'null 'vprint-symbol)
+  (:set 'string 'vprint-string)
+  (:set 'character 'vprint-char)
+  (:set 'pathname 'vprint-pathname)
+  (:set 'structure-object 'vprint-structure))
 
 (defun count-pre-body-forms (lambda-list)
   (loop :for elt
@@ -710,8 +819,6 @@
          (rec list)))))
   (values))
 
-(set-vprint-dispatch 'list 'vprint-list)
-
 (defun vprint-vector (output vector)
   (vprint-logical-block (output nil :prefix "#(" :suffix ")")
     (do ((i 0 (1+ i)))
@@ -720,8 +827,6 @@
       (if (array-in-bounds-p vector (1+ i))
           (progn (put-char #\Space output) (vprint-newline :fill output))
           (return)))))
-
-(set-vprint-dispatch 'vector 'vprint-vector)
 
 (defun vprint-array (output array)
   (labels ((rec (dims indices output)
@@ -737,16 +842,12 @@
                                                   (array-rank array)))
       (rec (array-dimensions array) nil output))))
 
-(set-vprint-dispatch 'array 'vprint-array)
-
 (defun vprint-quote (output quote)
   (if (cddr quote)
       (vprint-list output quote)
       (vprint-logical-block (output nil :prefix "'")
         (vprint-list output (cdr quote) nil)))
   (values))
-
-(set-vprint-dispatch '(cons (member quote)) 'vprint-quote)
 
 (defun vprint-function (output function)
   (if (cddr function)
@@ -755,42 +856,10 @@
         (vprint-list output (cdr function) nil)))
   (values))
 
-(set-vprint-dispatch '(cons (member function)) 'vprint-function)
-
 (defun vprint-backquote (output backquote)
   (vprint-logical-block (output nil :prefix "`")
     (vprint-list output (cdr backquote) nil))
   (values))
-
-(set-vprint-dispatch '(cons (member #.(or #+sbcl 'sb-int:quasiquote)))
-                     'vprint-backquote)
-
-(defun vprint-pathname (output pathname)
-  (vprint-logical-block (output nil :prefix "#P")
-    (put pathname output
-         :color cl-colors2:+tomato+
-         :key (lambda (p) (prin1-to-string (namestring p)))))
-  (values))
-
-(set-vprint-dispatch 'pathname 'vprint-pathname)
-
-(defun vprint-structure (output structure)
-  (vprint-logical-block (output nil :prefix "#S(" :suffix ")")
-    (put (type-of structure) output :color cl-colors2:+limegreen+)
-    (put-char #\Space output)
-    (vprint-indent :current 0 output)
-    (loop :for (slot . rest) :on (c2mop:class-slots (class-of structure))
-          :for name = (c2mop:slot-definition-name slot)
-          :do (put name output
-                   :color cl-colors2:+yellow+
-                   :key (lambda (n) (format nil ":~S" n)))
-              (put-char #\Space output)
-              (vprint (slot-value structure name) output t)
-              (when rest
-                (put-char #\Space output)
-                (vprint-newline :linear output)))))
-
-(set-vprint-dispatch 'structure-object 'vprint-structure)
 
 (defun vprint-let (output exp)
   (vprint-logical-block (output exp :prefix "(" :suffix ")")
@@ -832,8 +901,6 @@
           (put-char #\Space output)
           (vprint-newline :linear output))))
 
-(set-vprint-dispatch '(cons (member let let*)) 'vprint-let)
-
 (defun vprint-block (output exp)
   (vprint-logical-block (output exp :prefix "(" :suffix ")")
     (vprint (vprint-pop) output t) ; operator
@@ -846,11 +913,24 @@
           (put-char #\Space output)
           (vprint-newline :linear output))))
 
-(set-vprint-dispatch
-  '(cons
-     (member block unwind-protect prog1 return-from catch throw eval-when
-             multiple-value-call multiple-value-prog1))
-  'vprint-block)
+(define-vprint-dispatch :pretty-print-dispatch
+  (:set 'list 'vprint-list)
+  (:set 'vector 'vprint-vector)
+  (:set 'array 'vprint-array)
+  (:set '(cons (member quote)) 'vprint-quote)
+  (:set '(cons (member function)) 'vprint-function)
+  (:set '(cons (member #.(or #+sbcl 'sb-int:quasiquote))) 'vprint-backquote)
+  (:set '(cons (member let let* symbol-macrolet)) 'vprint-let)
+  (:set
+   '(cons
+      (member block unwind-protect prog1 return-from catch throw eval-when
+              multiple-value-call multiple-value-prog1))
+   'vprint-block))
+
+(define-vprint-dispatch :standard
+  (:merge :vivid-print-dispatch :pretty-print-dispatch))
+
+(setq *vprint-dispatch* (find-vprint-dispatch :standard))
 
 (setq *standard-vprint-dispatch* (copy-vprint-dispatch))
 

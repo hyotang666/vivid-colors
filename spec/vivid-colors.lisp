@@ -480,7 +480,7 @@
 
 ;;;; Side-Effects:
 ; Modify *VPRINT-DISPATCH*
-#?(let ((*vprint-dispatch* (vivid-colors::make-vprint-dispatch)))
+#?(let ((*vprint-dispatch* (vivid-colors::make-vprint-dispatch :name :dummy)))
     (set-vprint-dispatch 'null 'car)
     *vprint-dispatch*)
 :satisfies (lambda (result)
@@ -513,13 +513,14 @@
 
 ; If specified NIL, default vprint-dispatch table is copied.
 #?(let ((temp *vprint-dispatch*)
-	(*vprint-dispatch* (vivid-colors::make-vprint-dispatch)))
+	(*vprint-dispatch* (vivid-colors::make-vprint-dispatch :name :dummy)))
     (values (equalp *vprint-dispatch* (copy-vprint-dispatch nil))
 	    (equalp temp (copy-vprint-dispatch nil))))
 :values (NIL T)
 
 ; If vprint-dispatch is specified, such vprint-dispatch is copied.
 #?(let ((table (vivid-colors::make-vprint-dispatch
+		 :name :dummy
 		 :table (alexandria:plist-hash-table
 			  (list 'null (vivid-colors::make-vprinter :type 'null :function 'car))))))
     (values (eq table (copy-vprint-dispatch table))
