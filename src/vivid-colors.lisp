@@ -793,6 +793,7 @@
                                    :suffix (if print-paren
                                                ")"
                                                ""))
+       (vprint-exit-if-list-exhausted)
        (loop (vprint (vprint-pop) output t)
              (vprint-exit-if-list-exhausted)
              (put-char #\Space output)
