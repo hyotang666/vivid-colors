@@ -803,26 +803,17 @@
     ((and (symbolp (car list)) (fboundp (car list)) print-paren)
      (vprint-funcall output list))
     (t
-     (vprint-logical-block (output nil
+     (vprint-logical-block (output (the list list)
                                    :prefix (if print-paren
                                                "("
                                                "")
                                    :suffix (if print-paren
                                                ")"
                                                ""))
-       (labels ((rec (list)
-                  (cond ((null list))
-                        ((atom list)
-                         (put-char #\. output)
-                         (put-char #\Space output)
-                         (vprint list output t))
-                        ((consp list)
-                         (vprint (car list) output t)
-                         (when (cdr list)
-                           (put-char #\Space output)
-                           (vprint-newline newline-kind output)
-                           (rec (cdr list)))))))
-         (rec list)))))
+       (loop (vprint (vprint-pop) output t)
+             (vprint-exit-if-list-exhausted)
+             (put-char #\Space output)
+             (vprint-newline newline-kind output)))))
   (values))
 
 (defun vprint-vector (output vector)
