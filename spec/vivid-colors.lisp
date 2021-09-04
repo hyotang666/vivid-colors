@@ -717,3 +717,160 @@
     (vprint-logical-block (nil nil)
       (vprint-newline :mandatory *standard-output*)))
 :outputs ""
+
+(requirements-about FIND-VPRINT-DISPATCH :doc-type function)
+
+;;;; Description:
+
+#+syntax (FIND-VPRINT-DISPATCH name) ; => result
+
+;;;; Arguments and Values:
+
+; name := symbol, otherwise implementation dependent condition.
+#?(find-vprint-dispatch "not symbol") :signals condition
+
+; result := (or null vprint-dispatch)
+
+;;;; Affected By:
+; vivid-colors::*vprint-dispatch-repositoty*.
+
+;;;; Side-Effects:
+; none
+
+;;;; Notes:
+
+;;;; Exceptional-Situations:
+
+(requirements-about STORE-VPRINT-DISPATCH :doc-type function)
+
+;;;; Description:
+
+#+syntax (STORE-VPRINT-DISPATCH name vprint-dispatch) ; => result
+
+;;;; Arguments and Values:
+
+; name := symbol, otherwise implementation dependent condition.
+#?(store-vprint-dispatch "not symbol" (vivid-colors::make-vprint-dispatch :name :dummy))
+:signals condition
+
+; vprint-dispatch := vprint-dispatch, otherwise implementation dependent condition.
+#?(store-vprint-dispatch :dummy "not vprint dispatch") :signals condition
+
+; result := vprint-dispatch
+
+;;;; Affected By:
+
+;;;; Side-Effects:
+; Modify vivid-colors::*vprint-dispatch-repository*
+
+;;;; Notes:
+
+;;;; Exceptional-Situations:
+
+(requirements-about MERGE-VPRINT-DISPATCH :doc-type function)
+
+;;;; Description:
+
+#+syntax (MERGE-VPRINT-DISPATCH vprint-dispatch &rest rest) ; => result
+
+;;;; Arguments and Values:
+
+; vprint-dispatch := vprint-dispatch, otherwise implementation dependent condition.
+#?(merge-vprint-dispatch "not vprint-dispatch") :signals condition
+
+; rest := vprint-dispatch, otherwise implementation dependent condition.
+#?(merge-vprint-dispatch (vivid-colors::make-vprint-dispatch :name :dummy)
+			 "not vprint-dispatch")
+:signals condition
+
+; result := vprint-dispatch
+
+;;;; Affected By:
+
+;;;; Side-Effects:
+
+;;;; Notes:
+; Always newly allocated vprint-dispatch is returned.
+#?(let ((vprint-dispatch (vivid-colors::make-vprint-dispatch :name :dummy)))
+    (eq vprint-dispatch (merge-vprint-dispatch vprint-dispatch)))
+=> NIL
+
+;;;; Exceptional-Situations:
+; When same key-type is exists, an error is signaled.
+#?(let ((*vprint-dispatch* (vivid-colors::make-vprint-dispatch
+			     :name :dummy
+			     :table (alexandria:plist-hash-table
+				      (list 'null (vivid-colors::make-vprinter
+						    :type 'null
+						    :function 'list))))))
+    (merge-vprint-dispatch *vprint-dispatch* (find-vprint-dispatch :standard)))
+:signals error
+,:with-restarts (replace ignore)
+
+(requirements-about DEFINE-VPRINT-DISPATCH :doc-type function)
+
+;;;; Description:
+
+#+syntax (DEFINE-VPRINT-DISPATCH name &body clause+) ; => result
+
+;;;; Arguments and Values:
+
+; name := symbol, otherwise implementation dependent condition.
+#?(define-vprint-dispatch "not symbol") :signals condition
+
+; clause+ := [ set-clause | merge-clause ], otherwise implementation dependent condition.
+#?(define-vprint-dispatch :dummy :unknown-form) :signals condition
+; set-clause := (:set type-specifier function), See SET-VPRINT-DISPATCH.
+; merge-clause := (:merge name*)
+; If specified vprint-dispatch is not found, an error is signaled.
+#?(define-vprint-dispatch :dummy (:merge :unknown)) :signals error
+
+; result := name.
+
+;;;; Affected By:
+; none
+
+;;;; Side-Effects:
+; Modify vivid-colors::*vprint-dispatch-repository*.
+#?(let ((vivid-colors::*vprint-dispatch-repository* (make-hash-table)))
+    (values (hash-table-count vivid-colors::*vprint-dispatch-repository*)
+	    (progn (define-vprint-dispatch :dummy)
+		   (hash-table-count vivid-colors::*vprint-dispatch-repository*))))
+:values (0 1)
+
+;;;; Notes:
+
+;;;; Exceptional-Situations:
+; When some merge-clause exists, implementation dependent condition.
+#?(define-vprint-dispatch :dummy (:merge) (:merge)) :signals condition
+
+(requirements-about IN-VPRINT-DISPATCH :doc-type function)
+
+;;;; Description:
+
+#+syntax (IN-VPRINT-DISPATCH name) ; => result
+
+;;;; Arguments and Values:
+
+; name := symbol, otherwise implementation dependent condition.
+#?(in-vprint-dispatch "not symbol") :signals condition
+; When specified vprint-dispatch is not found, an error is signaled.
+#?(in-vprint-dispatch :unknown) :signals error
+
+; result := vprint-dispatch
+
+;;;; Affected By:
+; vivid-colors::*vprint-dispatch-repository*
+
+;;;; Side-Effects:
+; Modify *vprint-dispatch*.
+#?(let ((*vprint-dispatch* *vprint-dispatch*))
+    (values (vivid-colors::vprint-dispatch-name *vprint-dispatch*)
+	    (progn (in-vprint-dispatch :vivid-print-dispatch)
+		   (vivid-colors::vprint-dispatch-name *vprint-dispatch*))))
+:values (:STANDARD :VIVID-PRINT-DISPATCH)
+
+;;;; Notes:
+
+;;;; Exceptional-Situations:
+
