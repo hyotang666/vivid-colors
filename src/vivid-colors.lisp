@@ -727,22 +727,6 @@
          :key (lambda (p) (prin1-to-string (namestring p)))))
   (values))
 
-(defun vprint-structure (output structure)
-  (vprint-logical-block (output nil :prefix "#S(" :suffix ")")
-    (put (type-of structure) output :color cl-colors2:+limegreen+)
-    (put-char #\Space output)
-    (vprint-indent :current 0 output)
-    (loop :for (slot . rest) :on (c2mop:class-slots (class-of structure))
-          :for name = (c2mop:slot-definition-name slot)
-          :do (put name output
-                   :color cl-colors2:+yellow+
-                   :key (lambda (n) (format nil ":~S" n)))
-              (put-char #\Space output)
-              (vprint (slot-value structure name) output t)
-              (when rest
-                (put-char #\Space output)
-                (vprint-newline :linear output)))))
-
 (define-vprint-dispatch :vivid-print-dispatch
   (:set 'keyword 'vprint-keyword)
   (:set 'real 'vprint-real)
@@ -750,8 +734,7 @@
   (:set 'null 'vprint-symbol)
   (:set 'string 'vprint-string)
   (:set 'character 'vprint-char)
-  (:set 'pathname 'vprint-pathname)
-  (:set 'structure-object 'vprint-structure))
+  (:set 'pathname 'vprint-pathname))
 
 (defun count-pre-body-forms (lambda-list)
   (loop :for elt
@@ -839,6 +822,20 @@
                                                   (array-rank array)))
       (rec (array-dimensions array) nil output))))
 
+(defun vprint-structure (output structure)
+  (vprint-logical-block (output nil :prefix "#S(" :suffix ")")
+    (vprint (type-of structure) output)
+    (put-char #\Space output)
+    (vprint-indent :current 0 output)
+    (loop :for (slot . rest) :on (c2mop:class-slots (class-of structure))
+          :for name = (c2mop:slot-definition-name slot)
+          :do (vprint (intern (symbol-name name) :keyword) output t)
+              (put-char #\Space output)
+              (vprint (slot-value structure name) output t)
+              (when rest
+                (put-char #\Space output)
+                (vprint-newline :linear output)))))
+
 (defun vprint-quote (output quote)
   (if (cddr quote)
       (vprint-list output quote)
@@ -914,6 +911,7 @@
   (:set 'list 'vprint-list)
   (:set 'vector 'vprint-vector)
   (:set 'array 'vprint-array)
+  (:set 'structure-object 'vprint-structure)
   (:set '(cons (member quote)) 'vprint-quote)
   (:set '(cons (member function)) 'vprint-function)
   (:set '(cons (member #.(or #+sbcl 'sb-int:quasiquote))) 'vprint-backquote)
