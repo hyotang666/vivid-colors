@@ -17,18 +17,33 @@
            "PUT-STRINGS" ; for partially colored string.
            "VPRINT-NEWLINE" ; like CL:PPRINT-NEWLINE.
            "VPRINT-INDENT" ; like CL:PPRINT-INDENT.
+           "VPRINT-POP" ; like CL:PPRINT-POP.
+           "VPRINT-EXIT-IF-LIST-EXHAUSTED" ; like
+                                           ; CL:PPRINT-EXIT-IF-LIST-EXHAUSTED.
            "VPRINT-LOGICAL-BLOCK" ; like CL:PPRINT-LOGICAL-BLOCK.
            ))
 
 (in-package :vivid-colors)
 
+;;;; CONDITION
+
+(define-condition out-of-scope (program-error cell-error)
+  ()
+  (:report
+   (lambda (this output)
+     (funcall
+       (formatter "~S is must be in the VPRINT-LOGICAL-BLOCK lexically.")
+       output (cell-error-name this)))))
+
 ;;;; UTILITIES
 
-(defun ensure-output-stream (designator)
-  (etypecase designator
-    (stream designator)
-    (null *standard-output*)
-    ((eql t) *terminal-io*)))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  ;; VPRINT-LOGICAL-BLOCK need this eval-when.
+  (defun <stream-var> (designator)
+    (typecase designator
+      (null '*standard-output*)
+      ((eql t) '*terminal-io*)
+      (otherwise designator))))
 
 (let ((non-printable-code-point
        (uiop:list-to-hash-set
@@ -346,15 +361,21 @@
   (values))
 
 (defmethod trivial-gray-streams:stream-finish-output ((s vprint-stream))
+  (setq st s)
   (vprint-newline nil s)
   (princ (section s) (output s)))
 
 ;;;; DSL
 
 (defmacro vprint-logical-block
-          ((var <stream> &key (prefix "") (suffix "")) &body body)
-  (let ((o (gensym "OUTER-MOST-P")) (s (gensym "SECTION")))
-    `(let* ((,s
+          ((<stream-var> <list> &key (prefix "") (suffix "")) &body body)
+  (let ((o (gensym "OUTER-MOST-P"))
+        (s (gensym "SECTION"))
+        (b (gensym "VPRINT-LOGICAL-BLOCK"))
+        (l (gensym "LIST"))
+        (var (<stream-var> <stream-var>)))
+    `(let* ((,l ,<list>)
+            (,s
              (when (boundp '*vstream*)
                (section *vstream*)))
             (,var
@@ -362,22 +383,140 @@
                  (progn
                   (vprint-newline nil *vstream*)
                   (setf (section *vstream*)
-                          (make-section :prefix ,prefix :suffix ,suffix))
+                          (if (not (listp ,l))
+                              (make-section)
+                              (make-section :prefix ,prefix :suffix ,suffix)))
                   *vstream*)
                  (make-instance 'vprint-stream
-                                :output (ensure-output-stream ,<stream>)
-                                :prefix ,prefix
-                                :suffix ,suffix)))
+                                :output ,var
+                                :prefix (if (not (listp ,l))
+                                            ""
+                                            ,prefix)
+                                :suffix (if (not (listp ,l))
+                                            ""
+                                            ,suffix))))
             (,o (not (boundp '*vstream*)))
             (*vstream* ,var))
-       (unwind-protect (progn ,@body)
-         (if ,o
-             (finish-output ,var)
-             (progn
-              (vprint-newline nil *vstream*)
-              (setf (tail (lines ,s)) (section *vstream*)
-                    (tail (lines ,s)) nil
-                    (section *vstream*) ,s)))))))
+       (block ,b
+         (unwind-protect
+             (if (not (listp ,l))
+                 (vprint ,l ,var t)
+                 (macrolet ((vprint-pop ()
+                              `(if (consp ,',l)
+                                   (prog1 (car ,',l) (setf ,',l (cdr ,',l)))
+                                   (prog1 ,',l
+                                     (put-char #\. ,',var)
+                                     (put-char #\Space ,',var)
+                                     (setf ,',l nil))))
+                            (vprint-exit-if-list-exhausted ()
+                              `(unless ,',l
+                                 (return-from ,',b (values)))))
+                   ,@body))
+           (if ,o
+               (finish-output ,var)
+               (progn
+                (vprint-newline nil *vstream*)
+                (setf (tail (lines ,s)) (section *vstream*)
+                      (tail (lines ,s)) nil
+                      (section *vstream*) ,s))))))))
+
+(define-compiler-macro vprint-logical-block
+                       (&whole whole
+                        (<stream-var> <list> &key (prefix "") (suffix ""))
+                        &body body &environment env)
+  (if (not (constantp <list> env))
+      (progn
+       (if (typep <list> '(cons (eql the) (cons (eql list))))
+           (let ((o (gensym "OUTER-MOST-P"))
+                 (s (gensym "SECTION"))
+                 (b (gensym "VPRINT-LOGICAL-BLOCK"))
+                 (l (gensym "LIST"))
+                 (var (<stream-var> <stream-var>)))
+             `(let* ((,l ,<list>)
+                     (,s
+                      (when (boundp '*vstream*)
+                        (section *vstream*)))
+                     (,var
+                      (if (boundp '*vstream*)
+                          (progn
+                           (vprint-newline nil *vstream*)
+                           (setf (section *vstream*)
+                                   (make-section :prefix ,prefix
+                                                 :suffix ,suffix))
+                           *vstream*)
+                          (make-instance 'vprint-stream
+                                         :output ,var
+                                         :prefix ,prefix
+                                         :suffix ,suffix)))
+                     (,o (not (boundp '*vstream*)))
+                     (*vstream* ,var))
+                (block ,b
+                  (unwind-protect
+                      (macrolet ((vprint-pop ()
+                                   `(if (consp ,',l)
+                                        (prog1 (car ,',l)
+                                          (setf ,',l (cdr ,',l)))
+                                        (prog1 ,',l
+                                          (put-char #\. ,',var)
+                                          (put-char #\Space ,',var)
+                                          (setf ,',l nil))))
+                                 (vprint-exit-if-list-exhausted ()
+                                   `(unless ,',l
+                                      (return-from ,',b (values)))))
+                        ,@body)
+                    (if ,o
+                        (finish-output ,var)
+                        (progn
+                         (vprint-newline nil *vstream*)
+                         (setf (tail (lines ,s)) (section *vstream*)
+                               (tail (lines ,s)) nil
+                               (section *vstream*) ,s)))))))
+           whole))
+      (let ((<list> (eval <list>)))
+        (if <list>
+            whole
+            (let ((o (gensym "OUTER-MOST-P"))
+                  (s (gensym "SECTION"))
+                  (b (gensym "VPRINT-LOGICAL-BLOCK"))
+                  (var (<stream-var> <stream-var>)))
+              `(let* ((,s
+                       (when (boundp '*vstream*)
+                         (section *vstream*)))
+                      (,var
+                       (if (boundp '*vstream*)
+                           (progn
+                            (vprint-newline nil *vstream*)
+                            (setf (section *vstream*)
+                                    (make-section :prefix ,prefix
+                                                  :suffix ,suffix))
+                            *vstream*)
+                           (make-instance 'vprint-stream
+                                          :output ,var
+                                          :prefix ,prefix
+                                          :suffix ,suffix)))
+                      (,o (not (boundp '*vstream*)))
+                      (*vstream* ,var))
+                 (block ,b
+                   (unwind-protect
+                       (macrolet ((vprint-pop ()
+                                    `(prog1 nil
+                                       (put-char #\. ,',var)
+                                       (put-char #\Space ,',var)))
+                                  (vprint-exit-if-list-exhausted ()
+                                    `(return-from ,',b (values))))
+                         ,@body)
+                     (if ,o
+                         (finish-output ,var)
+                         (progn
+                          (vprint-newline nil *vstream*)
+                          (setf (tail (lines ,s)) (section *vstream*)
+                                (tail (lines ,s)) nil
+                                (section *vstream*) ,s)))))))))))
+
+(defmacro vprint-pop () (error 'out-of-scope :name 'vprint-put))
+
+(defmacro vprint-exit-if-list-exhausted ()
+  (error 'out-of-scope :name 'vprint-exit-if-list-exhausted))
 
 ;;;; VPRINTER
 
@@ -498,43 +637,34 @@
           :count :it))
 
 (defun vprint-macrocall (output form)
-  (vprint-logical-block (output output :prefix "(" :suffix ")")
-    (vprint (first form) output t)
-    (when (null (cdr form))
-      (return-from vprint-macrocall (values)))
+  (vprint-logical-block (output form :prefix "(" :suffix ")")
+    (vprint (vprint-pop) output t)
+    (vprint-exit-if-list-exhausted)
     (vprint-indent :block 3 output)
     (put-char #\Space output)
     (loop :repeat (count-pre-body-forms (millet:lambda-list (car form)))
-          :for (elt . rest) :on (cdr form)
+          :for elt := (vprint-pop)
           :do (vprint-newline :miser output)
               (vprint elt output t)
-              (when (null rest)
-                (return-from vprint-macrocall (values)))
+              (vprint-exit-if-list-exhausted)
               (put-char #\Space output)
           :finally (vprint-indent :block 1 output)
-                   (vprint-newline :fill output)
+                   (vprint-newline :linear output)
                    ;; body
-                   (loop :for (elt . rest) :on rest
+                   (loop :for elt := (vprint-pop)
                          :do (vprint elt output t)
-                             (when (null rest)
-                               (return-from vprint-macrocall (values)))
+                             (vprint-exit-if-list-exhausted)
                              (put-char #\Space output)
-                             (vprint-newline :fill output)))))
+                             (vprint-newline :linear output)))))
 
 (defun vprint-funcall (output form)
-  (vprint-logical-block (output output :prefix "(" :suffix ")")
-    (vprint (first form) output t)
-    (cond ((null (cdr form)) (values))
-          ((atom (cdr form))
-           (put-char #\Space output)
-           (put-char #\. output)
-           (put-char #\Space output)
-           (vprint (cdr form) output t))
-          (t
-           (put-char #\Space output)
-           (vprint-indent :current 0 output)
-           (vprint-newline :miser output)
-           (vprint-list output (cdr form) nil :fill)))))
+  (vprint-logical-block (output form :prefix "(" :suffix ")")
+    (vprint (vprint-pop) output t)
+    (vprint-exit-if-list-exhausted)
+    (put-char #\Space output)
+    (vprint-indent :current 0 output)
+    (vprint-newline :miser output)
+    (vprint-list output (cdr form) nil :fill)))
 
 (defun vprint-list (output list &optional (print-paren t) (newline-kind :fill))
   (cond
@@ -543,7 +673,7 @@
     ((and (symbolp (car list)) (fboundp (car list)) print-paren)
      (vprint-funcall output list))
     (t
-     (vprint-logical-block (output output
+     (vprint-logical-block (output nil
                                    :prefix (if print-paren
                                                "("
                                                "")
@@ -568,7 +698,7 @@
 (set-vprint-dispatch 'list 'vprint-list)
 
 (defun vprint-vector (output vector)
-  (vprint-logical-block (output output :prefix "#(" :suffix ")")
+  (vprint-logical-block (output nil :prefix "#(" :suffix ")")
     (do ((i 0 (1+ i)))
         (nil)
       (vprint (aref vector i) output t)
@@ -582,12 +712,12 @@
   (labels ((rec (dims indices output)
              (if (endp dims)
                  (vprint (apply #'aref array (reverse indices)) output)
-                 (vprint-logical-block (output output :prefix "(" :suffix ")")
+                 (vprint-logical-block (output nil :prefix "(" :suffix ")")
                    (dotimes (x (car dims))
                      (rec (cdr dims) (cons x indices) output)
                      (when (< (1+ x) (car dims))
                        (put-char #\Space output)))))))
-    (vprint-logical-block (output output
+    (vprint-logical-block (output nil
                                   :prefix (format nil "#~DA"
                                                   (array-rank array)))
       (rec (array-dimensions array) nil output))))
@@ -597,7 +727,7 @@
 (defun vprint-quote (output quote)
   (if (cddr quote)
       (vprint-list output quote)
-      (vprint-logical-block (output output :prefix "'")
+      (vprint-logical-block (output nil :prefix "'")
         (vprint-list output (cdr quote) nil)))
   (values))
 
@@ -606,14 +736,14 @@
 (defun vprint-function (output function)
   (if (cddr function)
       (vprint-list output function)
-      (vprint-logical-block (output output :prefix "#'")
+      (vprint-logical-block (output nil :prefix "#'")
         (vprint-list output (cdr function) nil)))
   (values))
 
 (set-vprint-dispatch '(cons (member function)) 'vprint-function)
 
 (defun vprint-backquote (output backquote)
-  (vprint-logical-block (output output :prefix "`")
+  (vprint-logical-block (output nil :prefix "`")
     (vprint-list output (cdr backquote) nil))
   (values))
 
@@ -621,7 +751,7 @@
                      'vprint-backquote)
 
 (defun vprint-pathname (output pathname)
-  (vprint-logical-block (output output :prefix "#P")
+  (vprint-logical-block (output nil :prefix "#P")
     (put pathname output
          :color cl-colors2:+tomato+
          :key (lambda (p) (prin1-to-string (namestring p)))))
@@ -630,7 +760,7 @@
 (set-vprint-dispatch 'pathname 'vprint-pathname)
 
 (defun vprint-structure (output structure)
-  (vprint-logical-block (output output :prefix "#S(" :suffix ")")
+  (vprint-logical-block (output nil :prefix "#S(" :suffix ")")
     (put (type-of structure) output :color cl-colors2:+limegreen+)
     (put-char #\Space output)
     (vprint-indent :current 0 output)
@@ -660,5 +790,5 @@
       (let ((*print-right-margin*
              (or *print-right-margin* +default-line-width+))
             (*newlinep*))
-        (vprint-logical-block (output output)
+        (vprint-logical-block (output nil)
           (funcall (coerce (vprint-dispatch exp) 'function) output exp)))))

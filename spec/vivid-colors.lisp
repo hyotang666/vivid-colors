@@ -202,24 +202,24 @@
 ;;;; Tests:
 ; If :MANDATORY specified, newline is printed even if the form is short.
 #?(let ((*print-right-margin* 80))
-    (vprint-logical-block (out nil)
-      (vprint-newline :mandatory out)))
+    (vprint-logical-block (nil nil)
+      (vprint-newline :mandatory *standard-output*)))
 :outputs "
 "
 
 ; If :LINEAR is specified, newline is printed only if total length is greater than *print-right-margin*.
 #?(let ((*print-right-margin* 80)
 	(vivid-colors::*newlinep*))
-    (vprint-logical-block (out nil)
-      (put #\a out)
-      (vprint-newline :linear out)))
+    (vprint-logical-block (nil nil)
+      (put #\a *standard-output*)
+      (vprint-newline :linear *standard-output*)))
 :outputs "#\\a"
 
 #?(let ((*print-right-margin* 0)
 	(vivid-colors::*newlinep*))
-    (vprint-logical-block (out nil)
-      (put #\a out)
-      (vprint-newline :linear out)))
+    (vprint-logical-block (nil nil)
+      (put #\a *standard-output*)
+      (vprint-newline :linear *standard-output*)))
 :outputs "#\\a
 "
 
@@ -227,60 +227,60 @@
 ; Case 1: Not over miser width.
 #?(let ((*print-right-margin* 80)
 	(*print-miser-width* 0))
-    (vprint-logical-block (out nil)
-      (put #\a out)
-      (vprint-newline :miser out)))
+    (vprint-logical-block (nil nil)
+      (put #\a *standard-output*)
+      (vprint-newline :miser *standard-output*)))
 :outputs "#\\a"
 
 ; Case 2: Over miser width, but not over right margin.
 #?(let ((*print-right-margin* 80)
 	(*print-miser-width* 80))
-    (vprint-logical-block (out nil)
-      (put #\a out)
-      (vprint-newline :miser out)))
+    (vprint-logical-block (nil nil)
+      (put #\a *standard-output*)
+      (vprint-newline :miser *standard-output*)))
 :outputs "#\\a"
 
 ; Case 3: Over miser width and over right margin.
 #?(let ((*print-right-margin* 0)
 	(*print-miser-width* 80))
-    (vprint-logical-block (out nil)
-      (put #\a out)
-      (vprint-newline :miser out)))
+    (vprint-logical-block (nil nil)
+      (put #\a *standard-output*)
+      (vprint-newline :miser *standard-output*)))
 :outputs "#\\a
 "
 
 ; If :FILL is specified, newline is printed (a) when next is over *print-right-margin*.
 #?(let ((*print-right-margin* 5))
-    (vprint-logical-block (out nil)
-      (put #\a out)
-      (vprint-newline :fill out)
-      (put #\b out)))
+    (vprint-logical-block (nil nil)
+      (put #\a *standard-output*)
+      (vprint-newline :fill *standard-output*)
+      (put #\b *standard-output*)))
 :outputs "#\\a
 #\\b"
 
 #?(let ((*print-right-margin* 80))
-    (vprint-logical-block (out nil)
-      (put #\a out)
-      (vprint-newline :fill out)
-      (put #\b out)))
+    (vprint-logical-block (nil nil)
+      (put #\a *standard-output*)
+      (vprint-newline :fill *standard-output*)
+      (put #\b *standard-output*)))
 :outputs "#\\a#\\b"
 
 ; (b) if over *print-right-margin*.
 #?(let ((*print-right-margin* 2))
-    (vprint-logical-block (out nil)
-      (put #\a out)
-      (vprint-newline :fill out)
-      (put #\b out)))
+    (vprint-logical-block (nil nil)
+      (put #\a *standard-output*)
+      (vprint-newline :fill *standard-output*)
+      (put #\b *standard-output*)))
 :outputs "#\\a
 #\\b"
 
 ; (c) if under miser printing.
 #?(let ((*print-right-margin* 0)
 	(*print-miser-width* 80))
-    (vprint-logical-block (out nil)
-      (put #\a out)
-      (vprint-newline :fill out)
-      (put #\b out)))
+    (vprint-logical-block (nil nil)
+      (put #\a *standard-output*)
+      (vprint-newline :fill *standard-output*)
+      (put #\b *standard-output*)))
 :outputs "#\\a
 #\\b"
 
@@ -325,26 +325,27 @@
 ;;;; Description:
 ; PPRINT-LOGICAL-BLOCK for VPRINT-STREAM.
 
-#+syntax (VPRINT-LOGICAL-BLOCK (var <stream> &key (prefix "") (suffix ""))
+#+syntax (VPRINT-LOGICAL-BLOCK (<stream-var> <list> &key (prefix "") (suffix ""))
            &body
            body)
 ; => result
 
 ;;;; Arguments and Values:
 
-; var := symbol, otherwise implementation dependent condition.
+; <stream-var> := symbol, otherwise implementation dependent condition.
 #?(vprint-logical-block ("not symbol" nil)) :signals condition
-; Not evaluated.
-#?(vprint-logical-block ((intern "not evaluated.") nil)) :signals condition
+; Must refer output stream, otherwise implementation dependent condition.
+#?(let ((ref "not stream"))
+    (vprint-logical-block (ref nil)))
+:signals condition
 
-; <stream> := The form that generates output stream designator, otherwise type error.
-#?(vprint-logical-block (var "not output stream")) :signals type-error
+; <list> := The form generates list.
 
 ; prefix := string, otherwise implementation dependent condition.
-#?(vprint-logical-block (var nil :prefix 'not-string)) :signals condition
+#?(vprint-logical-block (nil nil :prefix 'not-string)) :signals condition
 
 ; suffix := string, otherwise implementation dependent condition.
-#?(vprint-logical-block (var nil :suffix 'not-string)) :signals condition
+#?(vprint-logical-block (nil nil :suffix 'not-string)) :signals condition
 
 ; body := implicit progn.
 
@@ -354,7 +355,7 @@
 ; vivid-colors::*vstream*
 ; If *VSTREAM* is unbound, VPRINT-STREAM is newly allocated.
 #?(values (boundp 'vivid-colors::*vstream*)
-	  (vprint-logical-block (var nil)
+	  (vprint-logical-block (nil nil)
             (boundp 'vivid-colors::*vstream*)))
 :values (nil t)
 
@@ -362,7 +363,7 @@
 #?(let* ((vs (make-instance 'vivid-colors::vprint-stream))
 	 (vivid-colors::*vstream* vs)
 	 (sec (vivid-colors::section vivid-colors::*vstream*)))
-    (vprint-logical-block (var nil)
+    (vprint-logical-block (nil nil)
       (values (eq vs vivid-colors::*vstream*)
 	      (eq sec (vivid-colors::section vivid-colors::*vstream*)))))
 :values (T NIL)
@@ -370,10 +371,65 @@
 ;;;; Side-Effects:
 ; Vivid notation is printed to <STREAM>.
 #?(with-output-to-string (out)
-    (vprint-logical-block (v out)
-      (princ "hoge" v)))
+    (vprint-logical-block (out nil)
+      (princ "hoge" out)))
 => "hoge"
 ,:test equal
+
+;;;; Notes:
+; Insinde the VPRINT-LOGICAL-BLOCK body, VPRINT-POP AND VPRINT-EXIT-IF-LIST-EXHAUSTED is works.
+#?(vprint-logical-block (nil (list 0 1 2))
+    (vprint-pop))
+=> 0
+
+#?(vprint-logical-block (nil (list 0 1 2))
+    (loop :for elt = (vprint-pop)
+	  :do (put elt *standard-output*)
+	  (vprint-exit-if-list-exhausted)))
+:outputs "012"
+
+;;;; Exceptional-Situations:
+; When <LIST> bound by non-list value, it is VPRINTed.
+#?(vprint-logical-block (nil 'not-list))
+:outputs "NOT-LIST"
+
+(requirements-about VPRINT-POP :doc-type function)
+
+;;;; Description:
+
+#+syntax (VPRINT-POP) ; => result
+
+;;;; Arguments and Values:
+
+; result := 
+
+;;;; Affected By:
+; Lexically inside the VPRINT-LOGICAL-BLOCK body, otherwise an error is signaled.
+#?(vprint-pop) :signals program-error
+,:lazy t
+
+;;;; Side-Effects:
+
+;;;; Notes:
+
+;;;; Exceptional-Situations:
+
+(requirements-about VPRINT-EXIT-IF-LIST-EXHAUSTED :doc-type function)
+
+;;;; Description:
+
+#+syntax (VPRINT-EXIT-IF-LIST-EXHAUSTED) ; => result
+
+;;;; Arguments and Values:
+
+; result := 
+
+;;;; Affected By:
+; Lexically inside the VPRINT-LOGICAL-BLOCK body, otherwise an error is signaled.
+#?(vprint-exit-if-list-exhausted) :signals program-error
+,:lazy t
+
+;;;; Side-Effects:
 
 ;;;; Notes:
 
@@ -608,12 +664,12 @@
 ; This is control coloring only. Pretty printings is not its responds.
 #?(let ((*print-vivid* nil)
 	(*print-right-margin* 80))
-    (vprint-logical-block (out nil)
-      (vprint-newline :mandatory out)))
+    (vprint-logical-block (nil nil)
+      (vprint-newline :mandatory *standard-output*)))
 :outputs "
 "
 
 #?(let ((*print-pretty* nil))
-    (vprint-logical-block (out nil)
-      (vprint-newline :mandatory out)))
+    (vprint-logical-block (nil nil)
+      (vprint-newline :mandatory *standard-output*)))
 :outputs ""
