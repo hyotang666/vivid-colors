@@ -73,7 +73,6 @@
 
 (defvar *vprint-dispatch*)
 
-
 (defvar *vprint-dispatch-repository* (make-hash-table :test #'eq))
 
 (declaim (type boolean *newlinep*))
@@ -659,8 +658,9 @@
           :collect vprinter))
 
 (defun vprint-dispatch (exp &optional (vprint-dispatch *vprint-dispatch*))
-  (let ((vprinters (sort (vprinters exp vprint-dispatch)
-			 #'subtypep :key #'vprinter-type)))
+  (let ((vprinters
+         (sort (vprinters exp vprint-dispatch) #'subtypep
+               :key #'vprinter-type)))
     (cond ((null vprinters) (values 'default-printer nil))
           ((null (cdr vprinters)) ; one element.
            (values (vprinter-function (car vprinters)) t))
