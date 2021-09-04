@@ -727,7 +727,7 @@
          :key (lambda (p) (prin1-to-string (namestring p)))))
   (values))
 
-(define-vprint-dispatch :vivid-print-dispatch
+(define-vprint-dispatch :vivid
   (:set 'keyword 'vprint-keyword)
   (:set 'real 'vprint-real)
   (:set '(and symbol (not keyword)) 'vprint-symbol)
@@ -907,7 +907,7 @@
           (put-char #\Space output)
           (vprint-newline :linear output))))
 
-(define-vprint-dispatch :pretty-print-dispatch
+(define-vprint-dispatch :pretty
   (:set 'list 'vprint-list)
   (:set 'vector 'vprint-vector)
   (:set 'array 'vprint-array)
@@ -923,7 +923,7 @@
    'vprint-block))
 
 (define-vprint-dispatch :standard
-  (:merge :vivid-print-dispatch :pretty-print-dispatch))
+  (:merge :vivid :pretty))
 
 (setq *vprint-dispatch* (find-vprint-dispatch :standard))
 
