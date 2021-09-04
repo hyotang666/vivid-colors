@@ -555,6 +555,8 @@
         find-vprint-dispatch))
 
 (defun find-vprint-dispatch (name)
+  #+clisp
+  (check-type name symbol)
   (values (gethash name *vprint-dispatch-repository*)))
 
 (declaim
@@ -562,6 +564,8 @@
         store-vprint-dispatch))
 
 (defun store-vprint-dispatch (name vprint-dispatch)
+  #+clisp
+  (progn (check-type name symbol) (check-type vprint-dispatch vprint-dispatch))
   (setf (gethash name *vprint-dispatch-repository*) vprint-dispatch))
 
 (declaim
