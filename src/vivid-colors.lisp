@@ -69,11 +69,10 @@
 
 (defconstant +default-line-width+ 80)
 
-(declaim (type vprint-dispatch *vprint-dispatch* *standard-vprint-dispatch*))
+(declaim (type vprint-dispatch *vprint-dispatch*))
 
 (defvar *vprint-dispatch*)
 
-(defvar *standard-vprint-dispatch*)
 
 (defvar *vprint-dispatch-repository* (make-hash-table :test #'eq))
 
@@ -931,8 +930,6 @@
   (:merge :vivid-print-dispatch :pretty-print-dispatch))
 
 (setq *vprint-dispatch* (find-vprint-dispatch :standard))
-
-(setq *standard-vprint-dispatch* (copy-vprint-dispatch))
 
 ;;;; VPRINT
 
