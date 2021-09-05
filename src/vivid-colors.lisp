@@ -917,6 +917,18 @@
           (put-char #\Space output)
           (vprint-newline :linear output))))
 
+(defun vprint-progn (output exp)
+  (vprint-logical-block (output exp :prefix "(" :suffix ")")
+    (vprint (vprint-pop) output t) ; operator
+    (vprint-exit-if-list-exhausted)
+    (put-char #\Space output)
+    (vprint-indent :block 1 output)
+    (vprint-newline :linear output)
+    (loop (vprint (vprint-pop) output t)
+          (vprint-exit-if-list-exhausted)
+          (put-char #\Space output)
+          (vprint-newline :linear output))))
+
 (define-vprint-dispatch :pretty
   (:set 'null 'default-printer)
   (:set 'list 'vprint-list)
@@ -928,6 +940,7 @@
   (:set '(cons (member #.(or #+sbcl 'sb-int:quasiquote))) 'vprint-backquote)
   (:set '(cons (member let let* symbol-macrolet)) 'vprint-let)
   (:set '(cons (member if)) 'vprint-if)
+  (:set '(cons (member progn locally tagbody)) 'vprint-progn)
   (:set
    '(cons
       (member block unwind-protect prog1 return-from catch throw eval-when
