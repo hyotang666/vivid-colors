@@ -870,9 +870,9 @@
 ; Modify *vprint-dispatch*.
 #?(let ((*vprint-dispatch* *vprint-dispatch*))
     (values (vivid-colors::vprint-dispatch-name *vprint-dispatch*)
-	    (progn (in-vprint-dispatch :vivid-print-dispatch)
+	    (progn (in-vprint-dispatch :vivid)
 		   (vivid-colors::vprint-dispatch-name *vprint-dispatch*))))
-:values (:STANDARD :VIVID-PRINT-DISPATCH)
+:values (:STANDARD :VIVID)
 
 ;;;; Notes:
 
