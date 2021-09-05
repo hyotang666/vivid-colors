@@ -705,8 +705,6 @@
   (put real output :color cl-colors2:+violet+)
   (values))
 
-(defun vprint-symbol (output symbol) (put symbol output) (values))
-
 (defun vprint-string (output string)
   (put string output :color cl-colors2:+tomato+)
   (values))
@@ -730,8 +728,6 @@
 (define-vprint-dispatch :vivid
   (:set 'keyword 'vprint-keyword)
   (:set 'real 'vprint-real)
-  (:set '(and symbol (not keyword)) 'vprint-symbol)
-  (:set 'null 'vprint-symbol)
   (:set 'string 'vprint-string)
   (:set 'character 'vprint-char)
   (:set 'pathname 'vprint-pathname))
@@ -911,6 +907,7 @@
           (vprint-newline :linear output))))
 
 (define-vprint-dispatch :pretty
+  (:set 'null 'default-printer)
   (:set 'list 'vprint-list)
   (:set 'vector 'vprint-vector)
   (:set 'array 'vprint-array)
