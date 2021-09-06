@@ -22,10 +22,12 @@
                                    ; NAMED-READTABLES:MERGE-READTABLES-INTO.
            "LIST-ALL-VPRINT-DISPATCHES" ; like CL:LIST-ALL-PACKAGES
            )
-  (:export ;;;; HELPER
+  (:export ;;;; HELPERS for color control.
            "PUT" ; like CL:WRITE.
-           "PUT-CHAR" ; like CL:WRITE-CHAR.
            "PUT-STRINGS" ; for partially colored string.
+           )
+  (:export ;;;; HELPER for pretty printings.
+           "PUT-CHAR" ; like CL:WRITE-CHAR.
            "VPRINT-NEWLINE" ; like CL:PPRINT-NEWLINE.
            "VPRINT-INDENT" ; like CL:PPRINT-INDENT.
            "VPRINT-POP" ; like CL:PPRINT-POP.
