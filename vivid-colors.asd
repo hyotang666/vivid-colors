@@ -2,7 +2,7 @@
 (in-package :asdf)
 (defsystem "vivid-colors"
   :version
-  "4.4.2"
+  "4.4.3"
   :depends-on
   (
    "trivial-gray-streams"       ; Wrapper for gray-streams.
@@ -18,7 +18,8 @@
   "src/"
   :components
   ((:file "package")
-   (:file "vivid-colors" :depends-on ("package")))
+   (:file "queue" :depends-on ("package"))
+   (:file "vivid-colors" :depends-on ("queue")))
   :author "SATO Shinichi"
   :license "MIT"
   :description #.(concatenate 'string
