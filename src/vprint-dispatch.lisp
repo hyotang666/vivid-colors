@@ -1,5 +1,26 @@
 (in-package :vivid-colors)
 
+;;;; CONDITION
+
+(define-condition dispatch-key-confliction (error)
+  ((type :initarg :type :reader conflicted-type))
+  (:report
+   (lambda (this output)
+     (funcall (formatter "VPRINT-DISPATCH key is conflicted. ~S") output
+              (conflicted-type this)))))
+
+;; RESTART functions
+
+(defun replace-by-new (condition)
+  (let ((restart (find-restart 'replace condition)))
+    (when restart
+      (invoke-restart restart))))
+
+(defun keep-old (condition)
+  (let ((restart (find-restart 'ignore condition)))
+    (when restart
+      (invoke-restart restart))))
+
 ;;;; VPRINTER object.
 
 (defstruct vprinter
