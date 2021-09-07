@@ -2,7 +2,7 @@
 (in-package :asdf)
 (defsystem "vivid-colors"
   :version
-  "4.4.4"
+  "4.4.5"
   :depends-on
   (
    "trivial-gray-streams"       ; Wrapper for gray-streams.
@@ -13,13 +13,15 @@
    "millet"                     ; Wrapper for implementation dependent utilities.
    "lambda-fiddle"              ; Utilities for lambda list processing.
    "closer-mop"                 ; Wrapper for Meta Object Protocols.
+   "alexandria"                 ; Utilities, implicitly depends on via (cl-colors2 cl-ansi-text).
    )
   :pathname
   "src/"
   :components
   ((:file "package")
    (:file "queue" :depends-on ("package"))
-   (:file "vivid-colors" :depends-on ("queue")))
+   (:file "vprint-dispatch" :depends-on ("package"))
+   (:file "vivid-colors" :depends-on ("queue" "vprint-dispatch")))
   :author "SATO Shinichi"
   :license "MIT"
   :description #.(concatenate 'string
