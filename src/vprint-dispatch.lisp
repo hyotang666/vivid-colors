@@ -44,6 +44,11 @@
                     (vprint-dispatch-name this)
                     (hash-table-count (vprint-dispatch-table this)))))))
 
+(defmacro dotable ((var <vprint-dispatch> &optional <return>) &body body)
+  `(hash-table-ext:doht (,var (vprint-dispatch-table ,<vprint-dispatch>)
+                         ,<return>)
+     ,@body))
+
 ;;;; Underlying database.
 
 (defvar *vprint-dispatch-repository* (make-hash-table :test #'eq))
@@ -84,20 +89,17 @@
 (defun merge-vprint-dispatch (vprint-dispatch &rest rest)
   (let ((vprint-dispatch (copy-vprint-dispatch vprint-dispatch)))
     (dolist (dispatch rest vprint-dispatch)
-      (loop :for key-type :being :each :hash-key :of
-                 (vprint-dispatch-table dispatch) :using (:hash-value vprinter)
-            :if (gethash key-type (vprint-dispatch-table vprint-dispatch))
-              :do (restart-case (error "Duplicates dispatch key.")
-                    (replace ()
-                        :report "Replace by new one."
-                      (setf (gethash key-type
-                                     (vprint-dispatch-table vprint-dispatch))
-                              vprinter))
-                    (ignore () :report "Ignore new one."))
-            :else
-              :do (setf (gethash key-type
-                                 (vprint-dispatch-table vprint-dispatch))
-                          vprinter)))))
+      (dotable ((key-type vprinter) dispatch)
+        (if (gethash key-type (vprint-dispatch-table vprint-dispatch))
+            (restart-case (error 'dispatch-key-confliction :type key-type)
+              (replace ()
+                  :report "Replace by new one."
+                (setf (gethash key-type
+                               (vprint-dispatch-table vprint-dispatch))
+                        vprinter))
+              (ignore () :report "Ignore new one."))
+            (setf (gethash key-type (vprint-dispatch-table vprint-dispatch))
+                    vprinter))))))
 
 ;;;; Current vprint-dispatch.
 
@@ -162,11 +164,10 @@
 
 (defun vprinters (exp &optional (vprint-dispatch *vprint-dispatch*))
   ;; For debug use.
-  (loop :for key-type :being :each :hash-key :of
-             (vprint-dispatch-table vprint-dispatch) :using
-             (:hash-value vprinter)
-        :if (typep exp key-type)
-          :collect vprinter))
+  (uiop:while-collecting (collect)
+    (dotable ((key-type vprinter) vprint-dispatch)
+      (when (typep exp key-type)
+        (collect vprinter)))))
 
 (defun vprint-dispatch (exp &optional (vprint-dispatch *vprint-dispatch*))
   (let ((vprinters

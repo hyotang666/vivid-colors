@@ -2,7 +2,7 @@
 (in-package :asdf)
 (defsystem "vivid-colors"
   :version
-  "4.5.0"
+  "4.6.0"
   :depends-on
   (
    "trivial-gray-streams"       ; Wrapper for gray-streams.
@@ -14,6 +14,7 @@
    "lambda-fiddle"              ; Utilities for lambda list processing.
    "closer-mop"                 ; Wrapper for Meta Object Protocols.
    "alexandria"                 ; Utilities, implicitly depends on via (cl-colors2 cl-ansi-text).
+   "hash-table-ext"             ; Utilities for hash-tables.
    )
   :pathname
   "src/"
