@@ -53,6 +53,10 @@
 
 (deftype newline-kind () '(member :mandatory :miser :fill :linear nil))
 
+;;;; GF
+
+(defgeneric compute-length (thing))
+
 ;;; LINE
 
 (defstruct line
@@ -65,6 +69,8 @@
           :read-only t)
   ;; Actual indent.
   (indent 0 :type indent))
+
+(defmethod compute-length ((line line)) (line-length line))
 
 (defvar *trim-right-p* nil)
 
@@ -96,25 +102,17 @@
   (lines (make-queue) :type queue :read-only t)
   (suffix "" :type simple-string :read-only t))
 
-(declaim
- (ftype (function ((or line section))
-         (values (mod #.most-positive-fixnum) &optional))
-        compute-length))
-
-(defun compute-length (thing)
-  (etypecase thing
-    (line (line-length thing))
-    (section
-     (let ((sum 0))
-       (declare (type (mod #.most-positive-fixnum) sum))
-       (incf sum (length (prefix thing)))
-       (doqueue ((thing nil) (lines thing) (setf sum (max 0 (1- sum))))
-         (unless (and (typep thing 'line)
-                      (every #'non-printable-char-p (line-contents thing)))
-           (incf sum (compute-length thing))
-           (incf sum)))
-       (incf sum (length (suffix thing)))
-       sum))))
+(defmethod compute-length ((section section))
+  (let ((sum 0))
+    (declare (type (mod #.most-positive-fixnum) sum))
+    (incf sum (length (prefix section)))
+    (doqueue ((thing nil) (lines section) (setf sum (max 0 (1- sum))))
+      (unless (and (typep thing 'line)
+                   (every #'non-printable-char-p (line-contents thing)))
+        (incf sum (compute-length thing))
+        (incf sum)))
+    (incf sum (length (suffix section)))
+    sum))
 
 (defun mandatory? (section)
   (labels ((rec (section)
