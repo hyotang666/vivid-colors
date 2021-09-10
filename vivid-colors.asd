@@ -2,7 +2,7 @@
 (in-package :asdf)
 (defsystem "vivid-colors"
   :version
-  "4.6.0"
+  "4.7.0"
   :depends-on
   (
    "trivial-gray-streams"       ; Wrapper for gray-streams.
@@ -22,6 +22,8 @@
   ((:file "package")
    (:file "queue" :depends-on ("package"))
    (:file "vprint-dispatch" :depends-on ("package"))
+   (:file "shared" :depends-on ("package"))
+   (:file "content" :depends-on ("shared"))
    (:file "vivid-colors" :depends-on ("queue" "vprint-dispatch")))
   :author "SATO Shinichi"
   :license "MIT"

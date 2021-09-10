@@ -9,42 +9,6 @@
 
 #?(subtypep '(cons (member quote)) 'list) => T
 
-(requirements-about PUT-CHAR :doc-type function)
-
-;;;; Description:
-; WRITE-CHAR for VPRINT-STREAM.
-
-#+syntax (PUT-CHAR char output) ; => result
-
-;;;; Arguments and Values:
-
-; char := character, otherwise implementation dependent condition.
-#?(put-char "not character" (make-instance 'vivid-colors::vprint-stream))
-:signals condition
-
-; output := vprint-stream, otherwise implementation dependent condition.
-#?(put-char #\a "not vprint-stream") :signals condition
-
-; result := character
-
-;;;; Affected By:
-; none
-
-;;;; Side-Effects:
-; Modify vprint-stream state.
-#?(let ((vs (make-instance 'vivid-colors::vprint-stream)))
-    (values (copy-seq (vivid-colors::buffer vs))
-	    (vivid-colors::view-length vs)
-	    (put-char #\a vs)
-	    (copy-seq (vivid-colors::buffer vs))
-	    (vivid-colors::view-length vs)))
-:values ("" 0 #\a "a" 1)
-
-;;;; Notes:
-; Because above side effect, you should use PUT-CHAR rather than WRITE-CHAR for VPRINT-STREAM.
-
-;;;; Exceptional-Situations:
-
 (requirements-about PUT-STRINGS :doc-type function)
 
 ;;;; Description:
@@ -87,22 +51,18 @@
 #?(let ((vs (make-instance 'vivid-colors::vprint-stream))
 	(*print-vivid* nil))
     (put-strings '("1" ("2" #.cl-colors2:+red+)) vs)
-    (values (copy-seq (vivid-colors::buffer vs))
-	    (vivid-colors::view-length vs)))
-:values ("\"12\"" 4)
+    (finish-output vs))
+:outputs "\"12\""
 
 ;;;; Side-Effects:
 ; Modify VPRINT-STREAM state.
 #?(let ((vs (make-instance 'vivid-colors::vprint-stream)))
     (put-strings '("1" ("2" #.cl-colors2:+red+)) vs)
-    (values (copy-seq (vivid-colors::buffer vs))
-	    (vivid-colors::view-length vs)))
-:values (#.(concatenate 'string
-			"\"1"
-			(let ((cl-ansi-text:*color-mode* :8bit))
-			  (cl-ansi-text:red "2"))
-			"\"")
-	 4)
+    (vivid-colors::contents-list (vivid-colors::section vs)))
+:satisfies (lambda (list)
+	     (& (equalp list
+			(list (vivid-colors::make-colored-string
+				:spec '("1" ("2" #.cl-colors2:+red+)))))))
 
 ;;;; Notes:
 ; For above side effect, you should use PUT-STRINGS instead of WRITE-STRING and/or CL-ANSI-TEXT:WITH-COLOR.
@@ -125,15 +85,23 @@
 ; output := vprint-stream, otherwise implementation dependent condition.
 #?(put t "not vprint stream") :signals condition
 
-; color := (or null cl-ansi-text:color-specifier), otherwise implementation dependent condition.
+; color := (or null cl-ansi-text:color-specifier (cons cl-ansi-text:color-specifier args), otherwise implementation dependent condition.
 #?(put t (make-instance 'vivid-colors::vprint-stream) :color "not color specifier")
+:signals condition
+#?(put t (make-instance 'vivid-colors::vprint-stream) :color (list cl-colors2:+red+ :unknown-key :dummy))
+:signals condition
+#?(put t (make-instance 'vivid-colors::vprint-stream) :color (list cl-colors2:+red+ :effect :unknown-effect))
+:signals condition
+#?(put t (make-instance 'vivid-colors::vprint-stream) :color (list cl-colors2:+red+ :style :unknown-style))
 :signals condition
 
 ; key := (or symbol function), otherwise implementation dependent condition.
 #?(put t (make-instance 'vivid-colors::vprint-stream) :key "not function designator")
 :signals condition
 ; KEY is as (function (object) string), if return type is not string, an error is signaled.
-#?(put t (make-instance 'vivid-colors::vprint-stream) :key #'identity)
+#?(let ((vs(make-instance 'vivid-colors::vprint-stream)))
+    (put t vs :key #'identity)
+    (finish-output vs))
 :signals error
 
 ; result := object
@@ -144,21 +112,15 @@
 ;;;; Side-Effects:
 ; Modify VPRINT-STREAM state.
 #?(let ((vs (make-instance 'vivid-colors::vprint-stream)))
-    (values (copy-seq (vivid-colors::buffer vs))
-	    (vivid-colors::view-length vs)
+    (values (copy-list (vivid-colors::contents-list (vivid-colors::section vs)))
 	    (put #\a vs)
-	    (copy-seq (vivid-colors::buffer vs))
-	    (vivid-colors::view-length vs)))
-:values ("" 0 #\a "#\\a" 3)
-
-#?(let ((vs (make-instance 'vivid-colors::vprint-stream)))
-    (values (copy-seq (vivid-colors::buffer vs))
-	    (vivid-colors::view-length vs)
-	    (put #\a vs :color cl-colors2:+red+)
-	    (copy-seq (vivid-colors::buffer vs))
-	    (vivid-colors::view-length vs)))
-:values ("" 0 #\a #.(let ((cl-ansi-text:*color-mode* :8bit))
-		      (cl-ansi-text:red  (prin1-to-string #\a))) 3)
+	    (vivid-colors::contents-list (vivid-colors::section vs))))
+:multiple-value-satisfies
+(lambda (before put after)
+  (& (null before)
+     (eql #\a put)
+     (equalp after (list (vivid-colors::make-object
+			   :content #\a)))))
 
 ;;;; Notes:
 ; Because above side effect, you should use PUT rather than WRITE for VPRINT-STREAM.
@@ -175,12 +137,12 @@
 
 ;;;; Arguments and Values:
 
-; kind := (member :miser :fill :linear :mandatory nil), otherwise implementation dependent condition.
+; kind := (member :miser :fill :linear :mandatory), otherwise implementation dependent condition.
 #?(vprint-newline "not member" (make-instance 'vivid-colors::vprint-stream))
 :signals condition
 
 ; output := vprint-stream, otherwise implementation dependent condition.
-#?(vprint-newline nil "not vprint stream") :signals condition
+#?(vprint-newline :linear "not vprint stream") :signals condition
 
 ; result := (VALUES)
 
@@ -191,13 +153,10 @@
 ; Modify VPRINT-STREAM state.
 #?(let ((vs (make-instance 'vivid-colors::vprint-stream)))
     (vprint-newline :linear vs)
-    (cdr (vivid-colors::queue-head (vivid-colors::lines (vivid-colors::section vs)))))
-:satisfies (lambda (queue)
-	     (& (listp queue)
-		(= 2 (length queue))
-		(equalp (first queue)
-			(vivid-colors::make-line :contents "" :length 0))
-		(eq :linear (second queue))))
+    (vivid-colors::contents-list (vivid-colors::section vs)))
+:satisfies (lambda (list)
+	     (& (equalp list
+			(list (vivid-colors::make-newline :kind :linear)))))
 
 ;;;; Notes:
 
@@ -315,10 +274,14 @@
 ;;;; Side-Effects:
 ; Modify VPRINT-STREAM state.
 #?(let ((vs (make-instance 'vivid-colors::vprint-stream)))
-    (values (vivid-colors::indent (vivid-colors::section vs))
+    (values (vivid-colors::contents-list (vivid-colors::section vs))
 	    (progn (vprint-indent :block 3 vs)
-		   (vivid-colors::indent (vivid-colors::section vs)))))
-:values (0 3)
+		   (vivid-colors::contents-list (vivid-colors::section vs)))))
+:multiple-value-satisfies
+(lambda (before after)
+  (& (null before)
+     (equalp after
+	     (list (vivid-colors::make-indent :width 3)))))
 
 ;;;; Notes:
 
@@ -640,18 +603,6 @@
 	       (princ "#P" out)
 	       (cl-ansi-text:with-color (cl-colors2:+tomato+ :stream out)
 		 (prin1 "tomato" out))))
-
-; VPRINT increase VIEW-POSITION.
-#?(let ((vivid-colors::*vstream*
-	  (make-instance 'vivid-colors::vprint-stream
-			 :output *standard-output*
-			 :prefix ""
-			 :suffix "")))
-    (vprint 'car)
-    (dev:peep vivid-colors::*vstream*)
-    (vivid-colors::compute-length (vivid-colors::section vivid-colors::*vstream*)))
-=> 3
-,:stream nil
 
 ; LET form.
 #?(vprint '(let))

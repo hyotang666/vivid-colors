@@ -35,5 +35,3 @@
                                            ; CL:PPRINT-EXIT-IF-LIST-EXHAUSTED.
            "VPRINT-LOGICAL-BLOCK" ; like CL:PPRINT-LOGICAL-BLOCK.
            ))
-
-
