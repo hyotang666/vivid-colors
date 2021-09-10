@@ -85,16 +85,19 @@
   ;; Set by PRINCed.
   (start 0 :type (integer 0 #.most-positive-fixnum))
   (prefix "" :type simple-string :read-only t)
-  (contents (make-queue :type 'content) :type queue :read-only t)
+  (contents (vivid-colors.queue:new :type 'content)
+            :type vivid-colors.queue:queue
+            :read-only t)
   (suffix "" :type simple-string :read-only t))
 
-(defun contents-list (section) (cdr (queue-head (contents section))))
+(defun contents-list (section)
+  (vivid-colors.queue:contents (contents section)))
 
 (deftype content ()
   '(or object character indent newline section colored-string))
 
 (defmacro docontents ((var <section> &optional <return>) &body body)
-  `(doqueue (,var (contents ,<section>) ,<return>)
+  `(vivid-colors.queue:for-each (,var (contents ,<section>) ,<return>)
      ,@body))
 
 (defun add-content (object section) (setf (tail (contents section)) object))

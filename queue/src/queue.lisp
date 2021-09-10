@@ -1,6 +1,17 @@
-(in-package :vivid-colors)
+(in-package :cl-user)
 
-(defstruct (queue (:constructor make-queue
+(defpackage :vivid-colors.queue
+  (:use :cl)
+  (:export #:queue ; Structure name.
+           #:new ; Constructor.
+           #:contents ; Reader.
+           #:tail ; Modifier.
+           #:for-each ; Iterator.
+           ))
+
+(in-package :vivid-colors.queue)
+
+(defstruct (queue (:constructor new
                    (&key (type t) &aux (head (cons :head nil)) (tail head))))
   head
   (tail (error "TAIL is required."))
@@ -11,6 +22,8 @@
   (rplacd (queue-tail queue) (setf (queue-tail queue) (list new)))
   new)
 
+(defun contents (queue) (cdr (queue-head queue)))
+
 (defun count-cons (cons)
   (labels ((rec (cons count)
              (if (atom cons)
@@ -18,7 +31,7 @@
                  (rec (cdr cons) (1+ count)))))
     (rec cons 0)))
 
-(defmacro doqueue ((var <queue> &optional <return>) &body body)
+(defmacro for-each ((var <queue> &optional <return>) &body body)
   (let ((vars (uiop:ensure-list var)))
     `(loop :for ,vars :on (cdr (queue-head ,<queue>))
                 :by (lambda (x) (nthcdr ,(count-cons vars) x))
