@@ -11,6 +11,8 @@
 
 (in-package :vivid-colors.queue)
 
+(declaim (optimize speed))
+
 (defstruct (queue (:constructor new
                    (&key (type t) &aux (head (cons :head nil)) (tail head))))
   head
@@ -18,7 +20,9 @@
   (type t :type (satisfies millet:type-specifier-p) :read-only t))
 
 (defun (setf tail) (new queue)
-  (assert (typep new (queue-type queue)))
+  (locally ; Due to type is known in runtime.
+   (declare (optimize (speed 1)))
+   (assert (typep new (queue-type queue))))
   (rplacd (queue-tail queue) (setf (queue-tail queue) (list new)))
   new)
 
@@ -29,6 +33,10 @@
              (if (atom cons)
                  count
                  (rec (cdr cons) (1+ count)))))
+    (declare
+      (ftype (function (t (mod #.most-positive-fixnum))
+              (values (mod #.most-positive-fixnum) &optional))
+             rec))
     (rec cons 0)))
 
 (defmacro for-each ((var <queue> &optional <return>) &body body)
