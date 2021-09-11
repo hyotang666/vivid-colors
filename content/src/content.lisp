@@ -8,9 +8,6 @@
            #:make-colored-string
            #:make-indent
            #:make-newline)
-  (:export ;;;; Configurations.
-           #:*position*
-           #:*newlinep*)
   (:export #:add-content ; modifier.
            #:print-content ; printer.
            #:newline-kind ; type.
