@@ -22,11 +22,12 @@
 
 ;;;; SPECIAL VARIABLES
 
-(declaim (type (integer 0 #.most-positive-fixnum) *position* *indent*))
+(declaim
+ (type (or null (integer 0 #.most-positive-fixnum)) *position* *indent*))
 
-(defvar *position*)
+(defvar *position* nil)
 
-(defvar *indent*)
+(defvar *indent* nil)
 
 (declaim (type boolean *newlinep*))
 
@@ -52,6 +53,12 @@
 ;; We do not want to overwrite PRINT-OBJECT for builtin type (i.e. character).
 
 (defgeneric print-content (content output))
+
+(defmethod print-content :around (content output)
+  (let ((*position* (or *position* 0))
+        (*indent* (or *indent* 0))
+        (*newlinep* *newlinep*))
+    (call-next-method)))
 
 ;;;; CHARACTER
 
