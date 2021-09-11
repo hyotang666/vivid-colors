@@ -34,6 +34,17 @@
 
 (defparameter *print-vivid* t)
 
+;;;; UTILITIES
+
+(defmacro with-enclose ((<stream> <open> <close>) &body body)
+  (let ((s (gensym "STREAM")) (o (gensym "OPEN")) (c (gensym "CLOSE")))
+    `(let ((,s ,<stream>) (,o ,<open>) (,c ,<close>))
+       (write-string ,o ,s)
+       (incf *position* (length ,o))
+       ,@body
+       (write-string ,c ,s)
+       (incf *position* (length ,c)))))
+
 ;;;; GF
 
 (defgeneric compute-length (thing))
@@ -174,26 +185,23 @@
         ((cons string) (incf sum (length (the simple-string (car spec)))))))))
 
 (defmethod print-content ((c colored-string) (output stream))
-  (write-char #\" output)
-  (incf *position*)
-  (dospec (spec c)
-    ;; Out of our responds. Etypecase emits many notes.
-    (declare (optimize (speed 1)))
-    (etypecase spec
-      (string (write-string spec output) (incf *position* (length spec)))
-      ((cons string (cons cl-ansi-text:color-specifier))
-       (destructuring-bind
-           (string . color)
-           spec
-         (when *print-vivid*
-           (write-string (apply #'cl-ansi-text:make-color-string color)
-                         output))
-         (write-string string output)
-         (when *print-vivid*
-           (write-string cl-ansi-text:+reset-color-string+ output))
-         (incf *position* (length string))))))
-  (write-char #\" output)
-  (incf *position*)
+  (with-enclose (output "\"" "\"")
+    (dospec (spec c)
+      ;; Out of our responds. Etypecase emits many notes.
+      (declare (optimize (speed 1)))
+      (etypecase spec
+        (string (write-string spec output) (incf *position* (length spec)))
+        ((cons string (cons cl-ansi-text:color-specifier))
+         (destructuring-bind
+             (string . color)
+             spec
+           (when *print-vivid*
+             (write-string (apply #'cl-ansi-text:make-color-string color)
+                           output))
+           (write-string string output)
+           (when *print-vivid*
+             (write-string cl-ansi-text:+reset-color-string+ output))
+           (incf *position* (length string)))))))
   c)
 
 ;;; SECTION
@@ -238,15 +246,6 @@
                  (section (rec content))))))
     (rec section)))
 
-(defmacro with-enclose ((<section> <stream>) &body body)
-  (let ((s (gensym "SECTION")) (o (gensym "STREAM")))
-    `(let ((,s ,<section>) (,o ,<stream>))
-       (write-string (prefix ,s) ,o)
-       (incf *position* (length (prefix ,s)))
-       ,@body
-       (write-string (suffix ,s) ,o)
-       (incf *position* (length (suffix ,s))))))
-
 (defun over-right-margin-p (contents)
   (and *print-right-margin*
        (<= (the fixnum *print-right-margin*)
@@ -289,13 +288,13 @@
                   (<= (the (mod #.array-total-size-limit) (compute-length s))
                       (the fixnum *print-right-margin*))
                   (not (mandatory? s))))
-         (with-enclose (s o)
+         (with-enclose (o (prefix s) (suffix s))
            (docontents (content s)
              (typecase content
                ((or character object colored-string section)
                 (print-content content o))))))
         (t
-         (with-enclose (s o)
+         (with-enclose (o (prefix s) (suffix s))
            (loop :for (content . rest) :on (contents-list s)
                  :do (etypecase content
                        (object (print-content content o))
