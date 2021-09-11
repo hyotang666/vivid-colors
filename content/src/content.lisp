@@ -18,6 +18,8 @@
 
 (in-package :vivid-colors.content)
 
+(declaim (optimize speed))
+
 ;;;; SPECIAL VARIABLES
 
 (declaim (type (integer 0 #.most-positive-fixnum) *position* *indent*))
@@ -79,6 +81,9 @@
            (let ((string? (funcall (object-key object) content)))
              (check-type string? string)
              (length string?))))
+    (declare
+      (ftype (function (t) (values (mod #.array-total-size-limit) &optional))
+             object-length))
     (let* ((content (object-content object))
            (shared? (vivid-colors.shared:storedp content)))
       (cond ((not shared?) (object-length content))
@@ -90,13 +95,20 @@
                                    :base 10))))
             (t
              (vivid-colors.shared:mark-printed content)
-             (+ 2 ; For #=
-                (length
-                  (write-to-string (vivid-colors.shared:id shared?) :base 10))
-                (object-length content)))))))
+             ;; I do not know how to fix note below.
+             ;; note: unable to open-code float conversion in mixed numric operation
+             ;; due to type uncertainty:
+             ;; The second argument is a NUMBER, not a FLOAT.
+             (locally
+              (declare (optimize (speed 1)))
+              (+ 2 ; For #=
+                 (length
+                   (write-to-string (vivid-colors.shared:id shared?) :base 10))
+                 (object-length content))))))))
 
 (defmethod print-content ((o object) (output stream))
   (let ((notation (funcall (object-key o) (object-content o))))
+    (declare (type simple-string notation))
     (labels ((print-colored ()
                (write-string
                  (let ((cl-ansi-text:*color-mode* :8bit))
@@ -153,25 +165,31 @@
 
 (defmethod compute-length ((s colored-string))
   (let ((sum 2))
+    (declare (type (mod #.array-total-size-limit) sum))
     (dospec (spec s sum)
       (etypecase spec
         (string (incf sum (length spec)))
-        ((cons string) (incf sum (length (car spec))))))))
+        ((cons string) (incf sum (length (the simple-string (car spec)))))))))
 
 (defmethod print-content ((c colored-string) (output stream))
   (write-char #\" output)
   (incf *position*)
   (dospec (spec c)
+    ;; Out of our responds. Etypecase emits many notes.
+    (declare (optimize (speed 1)))
     (etypecase spec
       (string (write-string spec output) (incf *position* (length spec)))
       ((cons string (cons cl-ansi-text:color-specifier))
-       (when *print-vivid*
-         (write-string (apply #'cl-ansi-text:make-color-string (cdr spec))
-                       output))
-       (write-string (car spec) output)
-       (when *print-vivid*
-         (write-string cl-ansi-text:+reset-color-string+ output))
-       (incf *position* (length (car spec))))))
+       (destructuring-bind
+           (string . color)
+           spec
+         (when *print-vivid*
+           (write-string (apply #'cl-ansi-text:make-color-string color)
+                         output))
+         (write-string string output)
+         (when *print-vivid*
+           (write-string cl-ansi-text:+reset-color-string+ output))
+         (incf *position* (length string))))))
   (write-char #\" output)
   (incf *position*)
   c)
@@ -204,7 +222,7 @@
     (declare (type (mod #.most-positive-fixnum) sum))
     (incf sum (length (prefix section)))
     (docontents (content section)
-      (incf sum (compute-length content)))
+      (incf sum (the (mod #.array-total-size-limit) (compute-length content))))
     (incf sum (length (suffix section)))
     sum))
 
@@ -232,14 +250,20 @@
   (let ((*indent* (+ (start s) (length (prefix s)))))
     (labels ((over-right-margin-p (rest)
                (and *print-right-margin*
-                    (<= *print-right-margin*
-                        (reduce #'+ rest
-                                :key #'compute-length
-                                :initial-value *position*))))
+                    (<= (the fixnum *print-right-margin*)
+                        (the (mod #.array-total-size-limit)
+                             (reduce #'+ rest
+                                     :key #'compute-length
+                                     :initial-value *position*)))))
              (miserp (rest)
                (and *print-miser-width*
                     *print-right-margin*
-                    (<= (- *print-right-margin* (start s)) *print-miser-width*)
+                    (<=
+                      (-
+                        (the (mod #.array-total-size-limit)
+                             *print-right-margin*)
+                        (start s))
+                      (the (mod #.array-total-size-limit) *print-miser-width*))
                     (over-right-margin-p rest)))
              (newline (newlinep)
                (and newlinep (setf *newlinep* newlinep))
@@ -259,7 +283,8 @@
         ((or (not *print-pretty*)
              (null *print-right-margin*)
              (and (not *newlinep*)
-                  (<= (compute-length s) *print-right-margin*)
+                  (<= (the (mod #.array-total-size-limit) (compute-length s))
+                      (the fixnum *print-right-margin*))
                   (not (mandatory? s))))
          (with-enclose (s o)
            (docontents (content s)
