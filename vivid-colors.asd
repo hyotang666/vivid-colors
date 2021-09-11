@@ -49,7 +49,10 @@
 ;; Enable testing via (asdf:test-system "vivid-colors").
 (defmethod component-depends-on
            ((o test-op) (c (eql (find-system "vivid-colors"))))
-  (append (call-next-method) '((test-op "vivid-colors.test"))))
+  (append (call-next-method)
+          '((test-op "vivid-colors.queue.test")
+            (test-op "vivid-colors.shared.test")
+            (test-op "vivid-colors.test"))))
 ;; Enable passing parameter for JINGOH:EXAMINER via ASDF:TEST-SYSTEM.
 (defmethod operate :around
            ((o test-op) (c (eql (find-system "vivid-colors")))
