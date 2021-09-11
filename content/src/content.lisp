@@ -247,17 +247,18 @@
        (write-string (suffix ,s) ,o)
        (incf *position* (length (suffix ,s))))))
 
+(defun over-right-margin-p (contents)
+  (and *print-right-margin*
+       (<= (the fixnum *print-right-margin*)
+           (the (mod #.array-total-size-limit)
+                (reduce #'+ contents
+                        :key #'compute-length
+                        :initial-value *position*)))))
+
 (defmethod print-content ((s section) (o stream))
   (setf (start s) *position*)
   (let ((*indent* (+ (start s) (length (prefix s)))))
-    (labels ((over-right-margin-p (rest)
-               (and *print-right-margin*
-                    (<= (the fixnum *print-right-margin*)
-                        (the (mod #.array-total-size-limit)
-                             (reduce #'+ rest
-                                     :key #'compute-length
-                                     :initial-value *position*)))))
-             (miserp (rest)
+    (labels ((miserp (rest)
                (and *print-miser-width*
                     *print-right-margin*
                     (<=
