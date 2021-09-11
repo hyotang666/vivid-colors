@@ -92,8 +92,7 @@
             :read-only t)
   (suffix "" :type simple-string :read-only t))
 
-(defun contents-list (section)
-  (vivid-colors.queue:contents (contents section)))
+(defun contents-list (section) (vivid-colors.queue:contents (contents section)))
 
 (deftype content ()
   '(or object character indent newline section colored-string))
@@ -102,7 +101,8 @@
   `(vivid-colors.queue:for-each (,var (contents ,<section>) ,<return>)
      ,@body))
 
-(defun add-content (object section) (setf (tail (contents section)) object))
+(defun add-content (object section)
+  (setf (vivid-colors.queue:tail (contents section)) object))
 
 (defmethod compute-length ((section section))
   (let ((sum 0))
