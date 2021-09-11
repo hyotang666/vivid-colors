@@ -2,7 +2,7 @@
 (in-package :asdf)
 (defsystem "vivid-colors"
   :version
-  "4.7.1"
+  "4.7.2"
   :depends-on
   (
    "trivial-gray-streams"       ; Wrapper for gray-streams.
@@ -15,16 +15,16 @@
    "closer-mop"                 ; Wrapper for Meta Object Protocols.
    "alexandria"                 ; Utilities, implicitly depends on via (cl-colors2 cl-ansi-text).
    "hash-table-ext"             ; Utilities for hash-tables.
-   "vivid-colors.queue"         ; Module queue.
+   "vivid-colors.queue"         ; Module the queue.
+   "vivid-colors.shared"        ; Module the shared object.
    )
   :pathname
   "src/"
   :components
   ((:file "package")
    (:file "vprint-dispatch" :depends-on ("package"))
-   (:file "shared" :depends-on ("package"))
-   (:file "content" :depends-on ("shared"))
-   (:file "vivid-colors" :depends-on ("queue" "vprint-dispatch")))
+   (:file "content" :depends-on ("package"))
+   (:file "vivid-colors" :depends-on ("vprint-dispatch")))
   :author "SATO Shinichi"
   :license "MIT"
   :description #.(concatenate 'string

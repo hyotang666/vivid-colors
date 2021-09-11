@@ -142,11 +142,15 @@
                (write-string cl-ansi-text:+reset-color-string+ (output s)))
              (print-refer (shared)
                (write-char #\# (output s))
-               (write (shared-id shared) :stream (output s) :base 10)
+               (write (vivid-colors.shared:id shared)
+                      :stream (output s)
+                      :base 10)
                (write-char #\# (output s)))
              (print-shared (shared printer)
                (write-char #\# (output s))
-               (write (shared-id shared) :stream (output s) :base 10)
+               (write (vivid-colors.shared:id shared)
+                      :stream (output s)
+                      :base 10)
                (write-char #\= (output s))
                (funcall printer))
              (print-it ()
@@ -156,12 +160,13 @@
               (if *print-vivid*
                   (print-colored)
                   (print-it))
-              (let ((shared? (shared-p (object-content o))))
-                (if (only-once-p (object-content o))
+              (let ((shared? (vivid-colors.shared:storedp (object-content o))))
+                (if (vivid-colors.shared:only-once-p (object-content o))
                     (if *print-vivid*
                         (print-colored)
                         (print-it))
-                    (if (already-printed-p (object-content o))
+                    (if (vivid-colors.shared:already-printed-p
+                          (object-content o))
                         (print-refer shared?)
                         (print-shared shared?
                                       (if *print-vivid*
@@ -169,10 +174,11 @@
                                           #'print-it))))))
           (if (not *print-circle*)
               (print-it)
-              (let ((shared? (shared-p (object-content o))))
-                (if (only-once-p (object-content o))
+              (let ((shared? (vivid-colors.shared:storedp (object-content o))))
+                (if (vivid-colors.shared:only-once-p (object-content o))
                     (print-it)
-                    (if (already-printed-p (object-content o))
+                    (if (vivid-colors.shared:already-printed-p
+                          (object-content o))
                         (print-refer shared?)
                         (print-shared shared? #'print-it)))))))
     (incf *position* (length notation)))
@@ -266,12 +272,9 @@
 
 (defmethod trivial-gray-streams:stream-finish-output ((s vprint-stream))
   (setq st s)
-  (with-check-object-seen nil
-    (let ((*position* 0)
-          (*shared-objects* (make-hash-table :test #'eq))
-          (*shared-count* 0)
-          (*newlinep* nil))
-      (print-content (section s) s))))
+  (vivid-colors.shared:with-check-object-seen ()
+    (let ((*position* 0) (*newlinep* nil))
+      (vivid-colors.shared:context () (print-content (section s) s)))))
 
 ;;;; DSL
 
@@ -285,11 +288,13 @@
              (<body> ()
                `(macrolet ((vprint-pop ()
                              `(if (consp ,',?list)
-                                  (prog1 (store-shared-object (car ,',?list))
+                                  (prog1
+                                      (vivid-colors.shared:store
+                                        (car ,',?list))
                                     (setf ,',?list
-                                            (store-shared-object
+                                            (vivid-colors.shared:store
                                               (cdr ,',?list))))
-                                  (prog1 (store-shared-object ,',?list)
+                                  (prog1 (vivid-colors.shared:store ,',?list)
                                     (write-char #\. ,',?stream)
                                     (write-char #\Space ,',?stream)
                                     (setf ,',?list nil))))
@@ -330,17 +335,15 @@
                                             ""
                                             ,suffix))))
             (,o (not (boundp '*vstream*)))
-            (*shared-objects*
-             (or *shared-objects* (make-hash-table :test #'eq)))
-            (*shared-count* (or *shared-count* 0))
             (*vstream* ,var))
-       (block ,b
-         (unwind-protect ,(<vlb-body> <list> l var b body)
-           (if ,o
-               (finish-output ,var)
-               (progn
-                (add-content (section *vstream*) ,s)
-                (setf (section *vstream*) ,s))))))))
+       (vivid-colors.shared:context ()
+         (block ,b
+           (unwind-protect ,(<vlb-body> <list> l var b body)
+             (if ,o
+                 (finish-output ,var)
+                 (progn
+                  (add-content (section *vstream*) ,s)
+                  (setf (section *vstream*) ,s)))))))))
 
 (defmacro vprint-pop () (error 'out-of-scope :name 'vprint-put))
 

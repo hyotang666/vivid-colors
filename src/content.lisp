@@ -53,16 +53,20 @@
            (let ((string? (funcall (object-key object) content)))
              (check-type string? string)
              (length string?))))
-    (let* ((content (object-content object)) (shared? (shared-p content)))
+    (let* ((content (object-content object))
+           (shared? (vivid-colors.shared:storedp content)))
       (cond ((not shared?) (object-length content))
-            ((only-once-p content) (object-length content))
-            ((already-printed-p content)
+            ((vivid-colors.shared:only-once-p content) (object-length content))
+            ((vivid-colors.shared:already-printed-p content)
              (+ 2 ; For ##
-                (length (write-to-string (shared-id shared?) :base 10))))
+                (length
+                  (write-to-string (vivid-colors.shared:id shared?)
+                                   :base 10))))
             (t
-             (mark-printed content)
+             (vivid-colors.shared:mark-printed content)
              (+ 2 ; For #=
-                (length (write-to-string (shared-id shared?) :base 10))
+                (length
+                  (write-to-string (vivid-colors.shared:id shared?) :base 10))
                 (object-length content)))))))
 
 ;;; COLORED-STRING
