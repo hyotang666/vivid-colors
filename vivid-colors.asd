@@ -2,7 +2,7 @@
 (in-package :asdf)
 (defsystem "vivid-colors"
   :version
-  "4.7.4"
+  "4.7.5"
   :depends-on
   (
    "trivial-gray-streams"       ; Wrapper for gray-streams.
@@ -17,13 +17,13 @@
    "hash-table-ext"             ; Utilities for hash-tables.
    "vivid-colors.queue"         ; Module the queue.
    "vivid-colors.shared"        ; Module the shared object.
+   "vivid-colors.content"       ; Module the content objects.
    )
   :pathname
   "src/"
   :components
   ((:file "package")
    (:file "vprint-dispatch" :depends-on ("package"))
-   (:file "content" :depends-on ("package"))
    (:file "vivid-colors" :depends-on ("vprint-dispatch")))
   :author "SATO Shinichi"
   :license "MIT"

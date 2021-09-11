@@ -20,13 +20,20 @@
       ((eql t) '*terminal-io*)
       (otherwise designator))))
 
+(let ((non-printable-code-point
+       (uiop:list-to-hash-set
+         (concatenate 'list
+                      (loop :for i :upfrom 0 :to #.(char-code #\Space)
+                            :collect (code-char i))
+                      (string (code-char #x7F))))))
+  (defun non-printable-char-p (char)
+    (values (gethash char non-printable-code-point))))
+
 ;;;; CONFIGURATIONS
 
 (defconstant +default-line-width+ 80)
 
 (defvar *vstream*)
-
-(defparameter *print-vivid* t)
 
 ;;;; VPRINT-STREAM
 
@@ -43,7 +50,8 @@
 
 (defmethod initialize-instance :after
            ((o vprint-stream) &key (prefix "") (suffix "") &allow-other-keys)
-  (setf (section o) (make-section :prefix prefix :suffix suffix)))
+  (setf (section o)
+          (vivid-colors.content:make-section :prefix prefix :suffix suffix)))
 
 #+(or ccl clisp)
 (defmethod trivial-gray-streams:stream-line-column ((s vprint-stream)) nil)
@@ -52,7 +60,7 @@
 
 (defmethod trivial-gray-streams:stream-write-char
            ((s vprint-stream) (c character))
-  (add-content c (section s)))
+  (vivid-colors.content:add-content c (section s)))
 
 ;; Adding object.
 
@@ -78,8 +86,10 @@
        (content output
         &key color (key #'prin1-to-string)
         &aux (key (coerce key 'function)))
-  (add-content
-    (make-object :content content :color (uiop:ensure-list color) :key key)
+  (vivid-colors.content:add-content
+    (vivid-colors.content:make-object :content content
+                                      :color (uiop:ensure-list color)
+                                      :key key)
     (section output))
   content)
 
@@ -91,7 +101,8 @@
             (lambda (x)
               (typep x '(or string (cons string (satisfies color-spec-p)))))
             strings))
-  (add-content (make-colored-string :spec strings) (section output))
+  (vivid-colors.content:add-content
+    (vivid-colors.content:make-colored-string :spec strings) (section output))
   nil)
 
 (declaim
@@ -100,181 +111,33 @@
         vprint-indent))
 
 (defun vprint-indent (kind width output)
-  (add-content (make-indent :kind kind :width width) (section output))
+  (vivid-colors.content:add-content
+    (vivid-colors.content:make-indent :kind kind :width width)
+    (section output))
   (values))
 
 (declaim
- (ftype (function (newline-kind vprint-stream) (values)) vprint-newline))
+ (ftype (function (vivid-colors.content:newline-kind vprint-stream) (values))
+        vprint-newline))
 
 (defun vprint-newline (kind output)
   #+clisp
-  (progn (check-type kind newline-kind) (check-type output vprint-stream))
-  (add-content (make-newline :kind kind) (section output))
+  (progn
+   (check-type kind vivid-colors.content:newline-kind)
+   (check-type output vprint-stream))
+  (vivid-colors.content:add-content
+    (vivid-colors.content:make-newline :kind kind) (section output))
   (values))
 
 ;;;; FINISH-OUTPUT as actual output.
 
-(declaim (type (integer 0 #.most-positive-fixnum) *position* *indent*))
-
-(defvar *position*)
-
-(defvar *indent*)
-
-(declaim (type boolean *newlinep*))
-
-(defvar *newlinep* nil)
-
-(defgeneric print-content (content output))
-
-(defmethod print-content ((c character) (s vprint-stream))
-  (write-char c (output s))
-  (incf *position*)
-  c)
-
-(defmethod print-content ((o object) (s vprint-stream))
-  (let ((notation (funcall (object-key o) (object-content o))))
-    (labels ((print-colored ()
-               (write-string
-                 (let ((cl-ansi-text:*color-mode* :8bit))
-                   (apply #'cl-ansi-text:make-color-string (object-color o)))
-                 (output s))
-               (print-it)
-               (write-string cl-ansi-text:+reset-color-string+ (output s)))
-             (print-refer (shared)
-               (write-char #\# (output s))
-               (write (vivid-colors.shared:id shared)
-                      :stream (output s)
-                      :base 10)
-               (write-char #\# (output s)))
-             (print-shared (shared printer)
-               (write-char #\# (output s))
-               (write (vivid-colors.shared:id shared)
-                      :stream (output s)
-                      :base 10)
-               (write-char #\= (output s))
-               (funcall printer))
-             (print-it ()
-               (write-string notation (output s))))
-      (if (object-color o)
-          (if (not *print-circle*)
-              (if *print-vivid*
-                  (print-colored)
-                  (print-it))
-              (let ((shared? (vivid-colors.shared:storedp (object-content o))))
-                (if (vivid-colors.shared:only-once-p (object-content o))
-                    (if *print-vivid*
-                        (print-colored)
-                        (print-it))
-                    (if (vivid-colors.shared:already-printed-p
-                          (object-content o))
-                        (print-refer shared?)
-                        (print-shared shared?
-                                      (if *print-vivid*
-                                          #'print-colored
-                                          #'print-it))))))
-          (if (not *print-circle*)
-              (print-it)
-              (let ((shared? (vivid-colors.shared:storedp (object-content o))))
-                (if (vivid-colors.shared:only-once-p (object-content o))
-                    (print-it)
-                    (if (vivid-colors.shared:already-printed-p
-                          (object-content o))
-                        (print-refer shared?)
-                        (print-shared shared? #'print-it)))))))
-    (incf *position* (length notation)))
-  o)
-
-(defmethod print-content ((c colored-string) (o vprint-stream))
-  (write-char #\" (output o))
-  (incf *position*)
-  (dospec (spec c)
-    (etypecase spec
-      (string (write-string spec (output o)) (incf *position* (length spec)))
-      ((cons string (cons cl-ansi-text:color-specifier))
-       (when *print-vivid*
-         (write-string (apply #'cl-ansi-text:make-color-string (cdr spec))
-                       (output o)))
-       (write-string (car spec) (output o))
-       (when *print-vivid*
-         (write-string cl-ansi-text:+reset-color-string+ (output o)))
-       (incf *position* (length (car spec))))))
-  (write-char #\" (output o))
-  (incf *position*)
-  c)
-
-(defmacro with-enclose ((<section> <stream>) &body body)
-  (let ((s (gensym "SECTION")) (v (gensym "VPRINT-STREAM")))
-    `(let ((,s ,<section>) (,v ,<stream>))
-       (write-string (prefix ,s) (output ,v))
-       (incf *position* (length (prefix ,s)))
-       ,@body
-       (write-string (suffix ,s) (output ,v))
-       (incf *position* (length (suffix ,s))))))
-
-(defmethod print-content ((s section) (o vprint-stream))
-  (setf (start s) *position*)
-  (let ((*indent* (+ (start s) (length (prefix s)))))
-    (labels ((over-right-margin-p (rest)
-               (and *print-right-margin*
-                    (<= *print-right-margin*
-                        (reduce #'+ rest
-                                :key #'compute-length
-                                :initial-value *position*))))
-             (miserp (rest)
-               (and *print-miser-width*
-                    *print-right-margin*
-                    (<= (- *print-right-margin* (start s)) *print-miser-width*)
-                    (over-right-margin-p rest)))
-             (newline (newlinep)
-               (and newlinep (setf *newlinep* newlinep))
-               (terpri (output o))
-               (dotimes (x *indent*) (write-char #\Space (output o))))
-             (indent (indent)
-               (setf *indent*
-                       (mcase:emcase indent-kind (indent-kind indent)
-                         (:block
-                           *indent*
-                           (+ (start s) (length (prefix s))
-                              (indent-width indent)))
-                         (:current
-                           *indent*
-                           (+ *position* (indent-width indent)))))))
-      (cond
-        ((or (not *print-pretty*)
-             (null *print-right-margin*)
-             (and (not *newlinep*)
-                  (<= (compute-length s) *print-right-margin*)
-                  (not (mandatory? s))))
-         (with-enclose (s o)
-           (docontents (content s)
-             (typecase content
-               ((or character object colored-string section)
-                (print-content content o))))))
-        (t
-         (with-enclose (s o)
-           (loop :for (content . rest) :on (contents-list s)
-                 :do (etypecase content
-                       (object (print-content content o))
-                       (section (print-content content o))
-                       (character (print-content content o))
-                       (colored-string (print-content content o))
-                       (newline
-                        (let ((kind (newline-kind content)))
-                          (mcase:emcase newline-kind kind
-                            ((:mandatory :linear) (newline t))
-                            (:miser
-                              (when (miserp rest)
-                                (newline t)))
-                            (:fill
-                              (when (or (over-right-margin-p rest) *newlinep*)
-                                (newline nil))))))
-                       (indent (indent content))))))))))
-
 (defmethod trivial-gray-streams:stream-finish-output ((s vprint-stream))
   (setq st s)
   (vivid-colors.shared:with-check-object-seen ()
-    (let ((*position* 0) (*newlinep* nil))
-      (vivid-colors.shared:context () (print-content (section s) s)))))
+    (let ((vivid-colors.content:*position* 0)
+          (vivid-colors.content:*newlinep* nil))
+      (vivid-colors.shared:context ()
+        (vivid-colors.content:print-content (section s) (output s))))))
 
 ;;;; DSL
 
@@ -323,8 +186,9 @@
                  (progn
                   (setf (section *vstream*)
                           (if (not (listp ,l))
-                              (make-section)
-                              (make-section :prefix ,prefix :suffix ,suffix)))
+                              (vivid-colors.content:make-section)
+                              (vivid-colors.content:make-section :prefix ,prefix
+                                                                 :suffix ,suffix)))
                   *vstream*)
                  (make-instance 'vprint-stream
                                 :output ,var
@@ -342,7 +206,7 @@
              (if ,o
                  (finish-output ,var)
                  (progn
-                  (add-content (section *vstream*) ,s)
+                  (vivid-colors.content:add-content (section *vstream*) ,s)
                   (setf (section *vstream*) ,s)))))))))
 
 (defmacro vprint-pop () (error 'out-of-scope :name 'vprint-put))
