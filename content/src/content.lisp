@@ -38,6 +38,8 @@
 
 (defgeneric compute-length (thing))
 
+;; We do not want to overwrite PRINT-OBJECT for builtin type (i.e. character).
+
 (defgeneric print-content (content output))
 
 ;;;; CHARACTER
