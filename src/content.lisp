@@ -15,8 +15,6 @@
 
 (defgeneric compute-length (thing))
 
-(defgeneric print-content (content stream))
-
 ;;;; CHARACTER
 
 (defmethod compute-length ((c character)) 1)
