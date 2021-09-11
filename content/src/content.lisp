@@ -1,18 +1,20 @@
 (in-package :cl-user)
 
-(defpackage :vivid-colors.content (:use :cl)
-  (:export
-    #:make-section
-    #:add-content
-    #:make-object
-    #:make-colored-string
-    #:make-indent
-    #:make-newline
-    #:*position*
-    #:*newlinep*
-    #:print-content
-    #:newline-kind
-    ))
+(defpackage :vivid-colors.content
+  (:use :cl)
+  (:export ;;;; Constructors.
+           #:make-section
+           #:make-object
+           #:make-colored-string
+           #:make-indent
+           #:make-newline)
+  (:export ;;;; Configurations.
+           #:*position*
+           #:*newlinep*)
+  (:export #:add-content ; modifier.
+           #:print-content ; printer.
+           #:newline-kind ; type.
+           ))
 
 (in-package :vivid-colors.content)
 
@@ -104,15 +106,11 @@
                (write-string cl-ansi-text:+reset-color-string+ output))
              (print-refer (shared)
                (write-char #\# output)
-               (write (vivid-colors.shared:id shared)
-                      :stream output
-                      :base 10)
+               (write (vivid-colors.shared:id shared) :stream output :base 10)
                (write-char #\# output))
              (print-shared (shared printer)
                (write-char #\# output)
-               (write (vivid-colors.shared:id shared)
-                      :stream output
-                      :base 10)
+               (write (vivid-colors.shared:id shared) :stream output :base 10)
                (write-char #\= output)
                (funcall printer))
              (print-it ()
