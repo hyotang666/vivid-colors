@@ -133,9 +133,8 @@
 
 (defmethod trivial-gray-streams:stream-finish-output ((s vprint-stream))
   (setq st s)
-  (vivid-colors.shared:with-check-object-seen ()
-    (vivid-colors.shared:context ()
-      (vivid-colors.content:print-content (section s) (output s)))))
+  (vivid-colors.shared:context ()
+    (vivid-colors.content:write-content (section s) :stream (output s))))
 
 ;;;; DSL
 
