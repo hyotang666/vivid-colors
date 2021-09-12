@@ -88,7 +88,23 @@
 
 ;;; OBJECT
 
-(defstruct object
+(defun validate-color-spec (color)
+  (destructuring-bind
+      (color &key effect style)
+      color
+    (locally ; Out of responds.
+     (declare (optimize (speed 1)))
+     (check-type color cl-ansi-text:color-specifier))
+    (and effect (assert (cl-ansi-text::find-effect-code effect)))
+    (and style (assert (cl-ansi-text::find-style-code style))))
+  color)
+
+(defstruct (object (:constructor make-object
+                    (&key content color key &aux
+                     (color
+                      (etypecase color
+                        (null color)
+                        (cons (validate-color-spec color)))))))
   (content (error "CONTENT is required.") :type t :read-only t)
   (color nil :type list :read-only t)
   (key #'prin1-to-string :type function :read-only t))
