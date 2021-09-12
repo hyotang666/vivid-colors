@@ -52,6 +52,7 @@
   (append (call-next-method)
           '((test-op "vivid-colors.queue.test")
             (test-op "vivid-colors.shared.test")
+            (test-op "vivid-colors.content.test")
             (test-op "vivid-colors.test"))))
 ;; Enable passing parameter for JINGOH:EXAMINER via ASDF:TEST-SYSTEM.
 (defmethod operate :around
