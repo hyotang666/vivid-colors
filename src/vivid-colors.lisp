@@ -150,8 +150,7 @@
 
 (defmacro vprint-logical-block
           ((<stream-var> <list> &key (prefix "") (suffix "")) &body body)
-  (let ((o (gensym "OUTER-MOST-P"))
-        (s (gensym "SECTION"))
+  (let ((s (gensym "SECTION"))
         (b (gensym "VPRINT-LOGICAL-BLOCK"))
         (l (gensym "LIST"))
         (var (<stream-var> <stream-var>)))
@@ -177,12 +176,11 @@
                                            :suffix (if (not (listp ,l))
                                                        ""
                                                        ,suffix)))))
-            (,o (not (boundp '*vstream*)))
             (*vstream* ,var))
        (vivid-colors.shared:context ()
          (block ,b
            (unwind-protect ,(<vlb-body> <list> l var b body)
-             (if ,o
+             (if (not ,s)
                  (finish-output ,var)
                  (progn
                   (vivid-colors.content:add-content (section *vstream*) ,s)
