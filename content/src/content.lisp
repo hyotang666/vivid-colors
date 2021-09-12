@@ -22,13 +22,13 @@
 (declaim
  (type (or null (integer 0 #.most-positive-fixnum)) *position* *indent*))
 
-(defvar *position* nil)
+(defvar *position*)
 
-(defvar *indent* nil)
+(defvar *indent*)
 
 (declaim (type boolean *newlinep*))
 
-(defvar *newlinep* nil)
+(defvar *newlinep*)
 
 (defparameter *print-vivid* t)
 
@@ -50,12 +50,6 @@
 ;; We do not want to overwrite PRINT-OBJECT for builtin type (i.e. character).
 
 (defgeneric print-content (content output))
-
-(defmethod print-content :around (content output)
-  (let ((*position* (or *position* 0))
-        (*indent* (or *indent* 0))
-        (*newlinep* *newlinep*))
-    (call-next-method)))
 
 ;;;; CHARACTER
 
@@ -350,3 +344,52 @@
                               (when (or (over-right-margin-p rest) *newlinep*)
                                 (newline nil))))))
                        (indent (indent content))))))))))
+
+;;;; WRITE-CONTENT
+;;; Interface for end user.
+;;; We do not want to make end user care to wrap PRINT-CONTENT with WITH-PRINT-CONTEXT.
+
+(defmacro with-print-context
+          ((&key
+            (vivid '*print-vivid*)
+            (circle '*print-circle*)
+            (pretty '*print-pretty*)
+            (right-margin '*print-right-margin*)
+            (miser-width '*print-miser-width*))
+           &body body)
+  `(let ((*print-vivid* ,vivid)
+         (*print-circle* ,circle)
+         (*print-pretty* ,pretty)
+         (*print-right-margin* ,right-margin)
+         (*print-miser-width* ,miser-width)
+         (*position* 0)
+         (*indent* 0)
+         (*newlinep* nil))
+     ,@body))
+
+(set-pprint-dispatch '(cons (member with-print-context))
+                     (formatter
+                      #.(concatenate 'string "~:<" ; pprint-logical-block.
+                                     "~W~^~1I ~@_" ; operator.
+                                     (concatenate 'string "~:<" ; lambda-list
+                                                  "~@{~W~^ ~@_~W~^ ~_~}"
+                                                  "~:>~^ ~_")
+                                     "~@{~W~^ ~_~}" "~:>")))
+
+(declaim
+ (ftype (function
+         (content &key (:stream stream) (:vivid boolean) (:circle boolean)
+          (:pretty boolean)
+          (:right-margin (or null (mod #.array-total-size-limit)))
+          (:miser-width (or null (mod #.array-total-size-limit))))
+         (values t &optional))
+        write-content))
+
+(defun write-content
+       (content
+        &key (stream *standard-output*) ((:vivid *print-vivid*) *print-vivid*)
+        ((:circle *print-circle*) *print-circle*)
+        ((:pretty *print-pretty*) *print-pretty*)
+        ((:right-margin *print-right-margin*) *print-right-margin*)
+        ((:miser-width *print-miser-width*) *print-miser-width*))
+  (with-print-context () (print-content content stream)))
