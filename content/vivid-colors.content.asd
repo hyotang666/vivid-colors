@@ -2,12 +2,13 @@
 (in-package :asdf)
 (defsystem "vivid-colors.content"
   :version
-  "1.0.0"
+  "1.0.1"
   :depends-on
   (
    "uiop"                       ; Utilities, implicitly depends on via asdf.
    "mcase"                      ; Syntax, control flow with comprehensiveness checking.
    "cl-ansi-text"               ; Ansi color escape sequence.
+   "vivid-colors.queue"         ; Module the queue.
    "vivid-colors.shared"        ; Module the shared object.
    )
   :pathname
