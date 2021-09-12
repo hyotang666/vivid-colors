@@ -320,11 +320,12 @@
                            (+ *position* (indent-width indent)))))))
       (cond
         ((or (not *print-pretty*)
-             (null *print-right-margin*)
              (and (not *newlinep*)
-                  (<= (the (mod #.array-total-size-limit) (compute-length s))
-                      (the fixnum *print-right-margin*))
-                  (not (mandatory? s))))
+                  (not (mandatory? s))
+                  (or (not *print-right-margin*)
+                      (<=
+                        (the (mod #.array-total-size-limit) (compute-length s))
+                        (the fixnum *print-right-margin*)))))
          (with-enclose (o (prefix s) (suffix s))
            (docontents (content s)
              (typecase content
