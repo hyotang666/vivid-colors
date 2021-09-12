@@ -48,11 +48,6 @@
             :accessor section
             :documentation "Section block.")))
 
-(defmethod initialize-instance :after
-           ((o vprint-stream) &key (prefix "") (suffix "") &allow-other-keys)
-  (setf (section o)
-          (vivid-colors.content:make-section :prefix prefix :suffix suffix)))
-
 #+(or ccl clisp)
 (defmethod trivial-gray-streams:stream-line-column ((s vprint-stream)) nil)
 
@@ -174,12 +169,13 @@
                   *vstream*)
                  (make-instance 'vprint-stream
                                 :output ,var
-                                :prefix (if (not (listp ,l))
-                                            ""
-                                            ,prefix)
-                                :suffix (if (not (listp ,l))
-                                            ""
-                                            ,suffix))))
+                                :section (vivid-colors.content:make-section
+                                           :prefix (if (not (listp ,l))
+                                                       ""
+                                                       ,prefix)
+                                           :suffix (if (not (listp ,l))
+                                                       ""
+                                                       ,suffix)))))
             (,o (not (boundp '*vstream*)))
             (*vstream* ,var))
        (vivid-colors.shared:context ()
