@@ -64,20 +64,9 @@
 
 ;; Adding object.
 
-(defun color-spec-p (spec)
-  (or (null spec)
-      (typep spec 'cl-ansi-text:color-specifier)
-      (when (listp spec)
-        (destructuring-bind
-            (color &key effect style)
-            spec
-          (and (typep color 'cl-ansi-text:color-specifier)
-               (or (null effect) (cl-ansi-text::find-effect-code effect))
-               (or (null style) (cl-ansi-text::find-style-code style)))))))
-
 (declaim
  (ftype (function
-         (t vprint-stream &key (:color (satisfies color-spec-p))
+         (t vprint-stream &key (:color (or cl-ansi-text:color-specifier cons))
           (:key (or symbol function)))
          (values t &optional))
         put))
@@ -97,10 +86,6 @@
  (ftype (function (list vprint-stream) (values null &optional)) put-strings))
 
 (defun put-strings (strings output)
-  (assert (every
-            (lambda (x)
-              (typep x '(or string (cons string (satisfies color-spec-p)))))
-            strings))
   (vivid-colors.content:add-content
     (vivid-colors.content:make-colored-string :spec strings) (section output))
   nil)
