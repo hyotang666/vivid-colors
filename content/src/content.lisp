@@ -11,6 +11,7 @@
   (:export #:add-content ; modifier.
            #:write-content ; Printer.
            #:newline-kind ; type.
+           #:section ; type.
            ))
 
 (in-package :vivid-colors.content)

@@ -44,7 +44,8 @@
            :initform *standard-output*
            :documentation "Underlying actual stream.")
    (section :initarg :section
-            :type section
+            :initform (vivid-colors.content:make-section)
+            :type vivid-colors.content:section
             :accessor section
             :documentation "Section block.")))
 
