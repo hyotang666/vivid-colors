@@ -191,7 +191,21 @@
 
 ;;; COLORED-STRING
 
-(defstruct colored-string (spec nil :type list :read-only t))
+(defstruct (colored-string (:constructor make-colored-string
+                            (&key spec &aux
+                             (spec
+                              (mapc
+                                (lambda (x)
+                                  ;; Due to the cl-ansi-text:color-specifier.
+                                  (declare (optimize (speed 1)))
+                                  (etypecase x
+                                    (string x)
+                                    (cl-ansi-text:color-specifier x)
+                                    (cons
+                                     (check-type (car x) string)
+                                     (validate-color-spec (cdr x)))))
+                                spec)))))
+  (spec nil :type list :read-only t))
 
 (defmacro dospec ((var <colored-string> &optional <return>) &body body)
   `(dolist (,var (colored-string-spec ,<colored-string>) ,<return>) ,@body))
