@@ -5,17 +5,15 @@
   "4.7.7"
   :depends-on
   (
-   "trivial-gray-streams"       ; Wrapper for gray-streams.
-   "cl-ansi-text"               ; ANSI color control sequence.
-   "cl-colors2"                 ; Color objects. Implicitly depends on via cl-ansi-text.
    "uiop"                       ; Utilities. Implicitly depends on via asdf.
-   "mcase"                      ; Control frow macro with case comprehensiveness checking.
-   "millet"                     ; Wrapper for implementation dependent utilities.
    "lambda-fiddle"              ; Utilities for lambda list processing.
-   "closer-mop"                 ; Wrapper for Meta Object Protocols.
    "alexandria"                 ; Utilities, implicitly depends on via (cl-colors2 cl-ansi-text).
    "hash-table-ext"             ; Utilities for hash-tables.
-   "vivid-colors.queue"         ; Module the queue.
+   "millet"                     ; Wrapper for implementation dependent utilities.
+   "trivial-gray-streams"       ; Wrapper for gray-streams.
+   "closer-mop"                 ; Wrapper for Meta Object Protocols.
+   "cl-ansi-text"               ; ANSI color control sequence.
+   "cl-colors2"                 ; Color objects. Implicitly depends on via cl-ansi-text.
    "vivid-colors.shared"        ; Module the shared object.
    "vivid-colors.content"       ; Module the content objects.
    )
