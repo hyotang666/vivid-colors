@@ -258,6 +258,9 @@
   `(vivid-colors.queue:for-each (,var (contents ,<section>) ,<return>)
      ,@body))
 
+(declaim
+ (ftype (function (content section) (values content &optional)) add-content))
+
 (defun add-content (object section)
   (setf (vivid-colors.queue:tail (contents section)) object))
 
