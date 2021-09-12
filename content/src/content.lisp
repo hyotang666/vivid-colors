@@ -118,7 +118,7 @@
       (ftype (function (t) (values (mod #.array-total-size-limit) &optional))
              object-length))
     (let* ((content (object-content object))
-           (shared? (vivid-colors.shared:storedp content)))
+           (shared? (and *print-circle* (vivid-colors.shared:storedp content))))
       (cond ((not shared?) (object-length content))
             ((vivid-colors.shared:only-once-p content) (object-length content))
             ((vivid-colors.shared:already-printed-p content)
