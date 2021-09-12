@@ -9,7 +9,7 @@
            #:make-indent
            #:make-newline)
   (:export #:add-content ; modifier.
-           #:print-content ; printer.
+           #:write-content ; Printer.
            #:newline-kind ; type.
            ))
 
