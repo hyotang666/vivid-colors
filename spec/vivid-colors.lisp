@@ -47,27 +47,20 @@
 ; result := null
 
 ;;;; Affected By:
-; *PRINT-VIVID*
-#?(let ((vs (make-instance 'vivid-colors::vprint-stream))
-	(*print-vivid* nil))
-    (put-strings '("1" ("2" #.cl-colors2:+red+)) vs)
-    (finish-output vs))
-:outputs "\"12\""
+; none
 
 ;;;; Side-Effects:
 ; Modify VPRINT-STREAM state.
 #?(let ((vs (make-instance 'vivid-colors::vprint-stream)))
     (put-strings '("1" ("2" #.cl-colors2:+red+)) vs)
-    (vivid-colors::contents-list (vivid-colors::section vs)))
+    (vivid-colors.content::contents-list (vivid-colors::section vs)))
 :satisfies (lambda (list)
 	     (& (equalp list
-			(list (vivid-colors::make-colored-string
+			(list (vivid-colors.content::make-colored-string
 				:spec '("1" ("2" #.cl-colors2:+red+)))))))
 
 ;;;; Notes:
-; For above side effect, you should use PUT-STRINGS instead of WRITE-STRING and/or CL-ANSI-TEXT:WITH-COLOR.
-
-; Actual printing is done when FINISH-OUTPUT is called.
+; Acutually printing is not done.
 
 ;;;; Exceptional-Situations:
 
@@ -112,14 +105,14 @@
 ;;;; Side-Effects:
 ; Modify VPRINT-STREAM state.
 #?(let ((vs (make-instance 'vivid-colors::vprint-stream)))
-    (values (copy-list (vivid-colors::contents-list (vivid-colors::section vs)))
+    (values (copy-list (vivid-colors.content::contents-list (vivid-colors::section vs)))
 	    (put #\a vs)
-	    (vivid-colors::contents-list (vivid-colors::section vs))))
+	    (vivid-colors.content::contents-list (vivid-colors::section vs))))
 :multiple-value-satisfies
 (lambda (before put after)
   (& (null before)
      (eql #\a put)
-     (equalp after (list (vivid-colors::make-object
+     (equalp after (list (vivid-colors.content::make-object
 			   :content #\a)))))
 
 ;;;; Notes:
@@ -153,99 +146,14 @@
 ; Modify VPRINT-STREAM state.
 #?(let ((vs (make-instance 'vivid-colors::vprint-stream)))
     (vprint-newline :linear vs)
-    (vivid-colors::contents-list (vivid-colors::section vs)))
+    (vivid-colors.content::contents-list (vivid-colors::section vs)))
 :satisfies (lambda (list)
 	     (& (equalp list
-			(list (vivid-colors::make-newline :kind :linear)))))
+			(list (vivid-colors.content::make-newline :kind :linear)))))
 
 ;;;; Notes:
 
 ;;;; Exceptional-Situations:
-
-;;;; Tests:
-; If :MANDATORY specified, newline is printed even if the form is short.
-#?(let ((*print-right-margin* 80))
-    (vprint-logical-block (nil nil)
-      (vprint-newline :mandatory *standard-output*)))
-:outputs "
-"
-
-; If :LINEAR is specified, newline is printed only if total length is greater than *print-right-margin*.
-#?(let ((*print-right-margin* 80)
-	(vivid-colors::*newlinep*))
-    (vprint-logical-block (nil nil)
-      (put #\a *standard-output*)
-      (vprint-newline :linear *standard-output*)))
-:outputs "#\\a"
-
-#?(let ((*print-right-margin* 0)
-	(vivid-colors::*newlinep*))
-    (vprint-logical-block (nil nil)
-      (put #\a *standard-output*)
-      (vprint-newline :linear *standard-output*)))
-:outputs "#\\a
-"
-
-; If :MISER is specified, newline is printed when section is over *print-right-margin* and over *print-miser-width*.
-; Case 1: Not over miser width.
-#?(let ((*print-right-margin* 80)
-	(*print-miser-width* 0))
-    (vprint-logical-block (nil nil)
-      (put #\a *standard-output*)
-      (vprint-newline :miser *standard-output*)))
-:outputs "#\\a"
-
-; Case 2: Over miser width, but not over right margin.
-#?(let ((*print-right-margin* 80)
-	(*print-miser-width* 80))
-    (vprint-logical-block (nil nil)
-      (put #\a *standard-output*)
-      (vprint-newline :miser *standard-output*)))
-:outputs "#\\a"
-
-; Case 3: Over miser width and over right margin.
-#?(let ((*print-right-margin* 0)
-	(*print-miser-width* 80))
-    (vprint-logical-block (nil nil)
-      (put #\a *standard-output*)
-      (vprint-newline :miser *standard-output*)))
-:outputs "#\\a
-"
-
-; If :FILL is specified, newline is printed (a) when next is over *print-right-margin*.
-#?(let ((*print-right-margin* 5))
-    (vprint-logical-block (nil nil)
-      (put #\a *standard-output*)
-      (vprint-newline :fill *standard-output*)
-      (put #\b *standard-output*)))
-:outputs "#\\a
-#\\b"
-
-#?(let ((*print-right-margin* 80))
-    (vprint-logical-block (nil nil)
-      (put #\a *standard-output*)
-      (vprint-newline :fill *standard-output*)
-      (put #\b *standard-output*)))
-:outputs "#\\a#\\b"
-
-; (b) if over *print-right-margin*.
-#?(let ((*print-right-margin* 2))
-    (vprint-logical-block (nil nil)
-      (put #\a *standard-output*)
-      (vprint-newline :fill *standard-output*)
-      (put #\b *standard-output*)))
-:outputs "#\\a
-#\\b"
-
-; (c) if under miser printing.
-#?(let ((*print-right-margin* 0)
-	(*print-miser-width* 80))
-    (vprint-logical-block (nil nil)
-      (put #\a *standard-output*)
-      (vprint-newline :fill *standard-output*)
-      (put #\b *standard-output*)))
-:outputs "#\\a
-#\\b"
 
 (requirements-about VPRINT-INDENT :doc-type function)
 
@@ -274,14 +182,14 @@
 ;;;; Side-Effects:
 ; Modify VPRINT-STREAM state.
 #?(let ((vs (make-instance 'vivid-colors::vprint-stream)))
-    (values (vivid-colors::contents-list (vivid-colors::section vs))
+    (values (vivid-colors.content::contents-list (vivid-colors::section vs))
 	    (progn (vprint-indent :block 3 vs)
-		   (vivid-colors::contents-list (vivid-colors::section vs)))))
+		   (vivid-colors.content::contents-list (vivid-colors::section vs)))))
 :multiple-value-satisfies
 (lambda (before after)
   (& (null before)
      (equalp after
-	     (list (vivid-colors::make-indent :width 3)))))
+	     (list (vivid-colors.content::make-indent :width 3)))))
 
 ;;;; Notes:
 
