@@ -365,7 +365,7 @@
          (*position* 0)
          (*indent* 0)
          (*newlinep* nil))
-     ,@body))
+     (vivid-colors.shared:with-check-object-seen () ,@body)))
 
 (set-pprint-dispatch '(cons (member with-print-context))
                      (formatter
