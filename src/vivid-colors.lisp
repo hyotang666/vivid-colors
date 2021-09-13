@@ -223,7 +223,7 @@
                     (vprint (vprint-pop) output t) ; var
                     (vprint-exit-if-list-exhausted)
                     (write-char #\Space output)
-                    (vprint-newline :miser output)
+                    (vprint-newline :linear output)
                     (loop (vprint (vprint-pop) output t) ; form
                           (vprint-exit-if-list-exhausted)
                           (write-char #\Space output)
