@@ -333,7 +333,8 @@
                 (print-content content o))))))
         (t
          (with-enclose (o (prefix s) (suffix s))
-           (loop :for (content . rest) :on (contents-list s)
+           (loop :for (content . rest) :of-type (content . list)
+                      :on (contents-list s)
                  :do (etypecase content
                        (object (print-content content o))
                        (section (print-content content o))
@@ -347,7 +348,13 @@
                               (when (miserp rest s)
                                 (newline :miser)))
                             (:fill
-                              (when (over-right-margin-p rest)
+                              (when (let ((next
+                                           (find-if
+                                             (lambda (x)
+                                               (typep x '(or object section)))
+                                             rest)))
+                                      (and next
+                                           (over-right-margin-p (list next))))
                                 (newline nil))))))
                        (indent (indent content))))))))))
 
