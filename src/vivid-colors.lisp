@@ -217,6 +217,10 @@
 
 ;;;; PRINTERS
 
+(defun default-printer (output exp) (put exp output) (values))
+
+(setf vivid-colors.dispatch:*default-printer* 'default-printer)
+
 (defun vprint-keyword (output keyword)
   (put keyword output :color cl-colors2:+yellow+)
   (values))
@@ -245,7 +249,7 @@
          :key (lambda (p) (prin1-to-string (namestring p)))))
   (values))
 
-(define-vprint-dispatch :vivid
+(vivid-colors.dispatch:define-vprint-dispatch :vivid
   (:set 'keyword 'vprint-keyword)
   (:set 'real 'vprint-real)
   (:set 'string 'vprint-string)
@@ -449,7 +453,7 @@
           (write-char #\Space output)
           (vprint-newline :linear output))))
 
-(define-vprint-dispatch :pretty
+(vivid-colors.dispatch:define-vprint-dispatch :pretty
   (:set 'null 'default-printer)
   (:set 'list 'vprint-list)
   (:set 'vector 'vprint-vector)
@@ -467,10 +471,11 @@
               multiple-value-call multiple-value-prog1))
    'vprint-block))
 
-(define-vprint-dispatch :standard
+(vivid-colors.dispatch:define-vprint-dispatch :standard
   (:merge :vivid :pretty))
 
-(setq *vprint-dispatch* (find-vprint-dispatch :standard))
+(setq vivid-colors.dispatch:*vprint-dispatch*
+        (vivid-colors.dispatch:find-vprint-dispatch :standard))
 
 ;;;; VPRINT
 
@@ -479,9 +484,12 @@
 
 (defun vprint (exp &optional (output *standard-output*) recursivep)
   (if recursivep
-      (funcall (coerce (vprint-dispatch exp) 'function) output exp)
+      (funcall (coerce (vivid-colors.dispatch:vprint-dispatch exp) 'function)
+               output exp)
       (let ((*print-right-margin*
              (or *print-right-margin* +default-line-width+))
             (*print-miser-width* (or *print-miser-width* 60)))
         (vprint-logical-block (output nil)
-          (funcall (coerce (vprint-dispatch exp) 'function) output exp)))))
+          (funcall
+            (coerce (vivid-colors.dispatch:vprint-dispatch exp) 'function)
+            output exp)))))

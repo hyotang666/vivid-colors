@@ -1,4 +1,18 @@
-(in-package :vivid-colors)
+(in-package :cl-user)
+
+(defpackage :vivid-colors.dispatch
+  (:use :cl)
+  (:export #:dispatch-key-confliction ; condition.
+           #:replace-by-new ; restart-function
+           #:keep-old ; restart-function
+           #:vprint-dispatch ; structure name / function
+	   #:find-vprint-dispatch
+           #:*default-printer*
+           #:*vprint-dispatch*
+           #:define-vprint-dispatch ; dsl
+           #:in-vprint-dispatch))
+
+(in-package :vivid-colors.dispatch)
 
 ;;;; CONDITION
 
@@ -155,7 +169,7 @@
 
 ;;;; VPRINT-DISPATCH.
 
-(defun default-printer (output exp) (put exp output) (values))
+(defvar *default-printer*)
 
 (declaim
  (ftype (function (t &optional vprint-dispatch)
@@ -173,7 +187,7 @@
   (let ((vprinters
          (sort (vprinters exp vprint-dispatch) #'subtypep
                :key #'vprinter-type)))
-    (cond ((null vprinters) (values 'default-printer nil))
+    (cond ((null vprinters) (values *default-printer* nil))
           ((null (cdr vprinters)) ; one element.
            (values (vprinter-function (car vprinters)) t))
           ((or (and (subtypep (vprinter-type (first vprinters))

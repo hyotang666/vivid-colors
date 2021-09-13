@@ -2,13 +2,12 @@
 (in-package :asdf)
 (defsystem "vivid-colors"
   :version
-  "4.8.6"
+  "4.8.7"
   :depends-on
   (
    "uiop"                       ; Utilities. Implicitly depends on via asdf.
    "lambda-fiddle"              ; Utilities for lambda list processing.
    "alexandria"                 ; Utilities, implicitly depends on via (cl-colors2 cl-ansi-text).
-   "hash-table-ext"             ; Utilities for hash-tables.
    "millet"                     ; Wrapper for implementation dependent utilities.
    "trivial-gray-streams"       ; Wrapper for gray-streams.
    "closer-mop"                 ; Wrapper for Meta Object Protocols.
@@ -16,13 +15,13 @@
    "cl-colors2"                 ; Color objects. Implicitly depends on via cl-ansi-text.
    "vivid-colors.shared"        ; Module the shared object.
    "vivid-colors.content"       ; Module the content objects.
+   "vivid-colors.dispatch"      ; Module the vprint-dispatch.
    )
   :pathname
   "src/"
   :components
   ((:file "package")
-   (:file "vprint-dispatch" :depends-on ("package"))
-   (:file "vivid-colors" :depends-on ("vprint-dispatch")))
+   (:file "vivid-colors" :depends-on ("package")))
   :author "SATO Shinichi"
   :license "MIT"
   :description #.(concatenate 'string
