@@ -275,6 +275,26 @@
           (write-char #\Space output)
           (vprint-newline :linear output))))
 
+(defun vprint-loop (output exp)
+  (vprint-logical-block (output exp :prefix "(" :suffix ")")
+    (vprint (vprint-pop) output t) ; operator.
+    (vprint-exit-if-list-exhausted)
+    (write-char #\Space output)
+    (vprint-indent :current 0 output)
+    (vprint-newline :miser output)
+    (loop :for (elt . rest) :on (cdr exp)
+          :do (vprint elt output t)
+          :if (null rest)
+            :do (loop-finish)
+          :else :if (find (car rest)
+                          '(for with collect collecting do doing sum summing
+                            append appending nconc nconcing initially finally)
+                          :test (lambda (x y) (and (symbolp x) (string= x y))))
+            :do (vprint-newline :linear output)
+          :else
+            :do (write-char #\Space output)
+                (vprint-newline :fill output))))
+
 (define-vprint-dispatch :pretty
   (:set 'null 'default-printer)
   (:set 'list 'vprint-list)
@@ -287,6 +307,7 @@
   (:set '(cons (member let let* symbol-macrolet)) 'vprint-let)
   (:set '(cons (member if)) 'vprint-if)
   (:set '(cons (member progn locally tagbody)) 'vprint-progn)
+  (:set '(cons (member loop)) 'vprint-loop)
   (:set
    '(cons
       (member block unwind-protect prog1 return-from catch throw eval-when

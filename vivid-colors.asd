@@ -2,7 +2,7 @@
 (in-package :asdf)
 (defsystem "vivid-colors"
   :version
-  "5.0.2"
+  "5.1.0"
   :depends-on
   (
    "uiop"                       ; Utilities. Implicitly depends on via asdf.
