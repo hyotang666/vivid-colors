@@ -2,7 +2,7 @@
 (in-package :asdf)
 (defsystem "vivid-colors.dispatch.test"
   :version
-  "0.0.0"
+  "0.1.0"
   :depends-on
   (:jingoh "vivid-colors.dispatch")
   :components

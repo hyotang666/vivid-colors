@@ -46,6 +46,7 @@
           '((test-op "vivid-colors.queue.test")
             (test-op "vivid-colors.shared.test")
             (test-op "vivid-colors.content.test")
+            (test-op "vivid-colors.dispatch.test")
             (test-op "vivid-colors.stream.test")
             (test-op "vivid-colors.test"))))
 ;; Enable passing parameter for JINGOH:EXAMINER via ASDF:TEST-SYSTEM.
