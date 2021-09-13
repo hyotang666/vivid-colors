@@ -302,7 +302,7 @@
              (newline (newlinep)
                (and newlinep (setf *newlinep* newlinep))
                (terpri o)
-               (dotimes (x *indent*) (write-char #\Space o)))
+               (dotimes (x (setf *position* *indent*)) (write-char #\Space o)))
              (indent (indent)
                (setf *indent*
                        (mcase:emcase indent-kind (indent-kind indent)
