@@ -146,7 +146,37 @@
       (cond ((typep <list> '(cons (eql the) (cons (eql list)))) (<body>))
             ((not (constantp <list>)) (<whole>))
             ((listp (eval <list>)) (<body>))
-            (t `(vprint ,?list ,?stream t))))))
+            (t `(vprint ,?list ,?stream t)))))
+  (defun <make-section> (<list> ?list ?prefix ?suffix)
+    (symbol-macrolet ((<whole>
+                       `(if (not (listp ,?list))
+                            ,<then>
+                            ,<else>))
+                      (<then> `(vivid-colors.content:make-section))
+                      (<else>
+                       `(vivid-colors.content:make-section :prefix ,?prefix
+                                                           :suffix ,?suffix)))
+      (cond
+        ((constantp <list>)
+         (let ((value (eval <list>)))
+           (if (not (listp value))
+               <then>
+               <else>)))
+        (t <whole>))))
+  (defun <xxxfix> (<list> ?list ?xxxfix)
+    (symbol-macrolet ((<whole>
+                       `(if (not (listp ,?list))
+                            ,<then>
+                            ,<else>))
+                      (<then> "")
+                      (<else> ?xxxfix))
+      (cond
+        ((constantp <list>)
+         (let ((value (eval <list>)))
+           (if (not (listp value))
+               <then>
+               <else>)))
+        (t <whole>)))))
 
 (defmacro vprint-logical-block
           ((<stream-var> <list> &key (prefix "") (suffix "")) &body body)
@@ -162,21 +192,16 @@
              (if (boundp '*vstream*)
                  (progn
                   (setf (section *vstream*)
-                          (if (not (listp ,l))
-                              (vivid-colors.content:make-section)
-                              (vivid-colors.content:make-section :prefix ,prefix
-                                                                 :suffix ,suffix)))
+                          ,(<make-section> <list> l prefix suffix))
                   *vstream*)
                  (make-instance 'vprint-stream
                                 :output ,var
                                 :section (vivid-colors.content:make-section
-                                           :prefix (if (not (listp ,l))
-                                                       ""
-                                                       ,prefix)
-                                           :suffix (if (not (listp ,l))
-                                                       ""
-                                                       ,suffix)))))
+                                           :prefix ,(<xxxfix> <list> l prefix)
+                                           :suffix ,(<xxxfix> <list> l
+                                                              suffix)))))
             (*vstream* ,var))
+       (declare (ignorable ,l))
        (vivid-colors.shared:context ()
          (block ,b
            (unwind-protect ,(<vlb-body> <list> l var b body)
