@@ -2,7 +2,7 @@
 (in-package :asdf)
 (defsystem "vivid-colors.dispatch"
   :version
-  "0.0.0"
+  "0.0.1"
   :depends-on
   (
    "hash-table-ext"     ; Utilities for hash-table.

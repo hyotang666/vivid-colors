@@ -6,13 +6,15 @@
            #:replace-by-new ; restart-function
            #:keep-old ; restart-function
            #:vprint-dispatch ; structure name / function
-	   #:find-vprint-dispatch
+           #:find-vprint-dispatch
            #:*default-printer*
            #:*vprint-dispatch*
            #:define-vprint-dispatch ; dsl
            #:in-vprint-dispatch))
 
 (in-package :vivid-colors.dispatch)
+
+(declaim (optimize speed))
 
 ;;;; CONDITION
 
@@ -37,12 +39,14 @@
 
 ;;;; VPRINTER object.
 
-(defstruct vprinter
-  (type (error "TYPE is required.") :read-only t)
-  (function (error "FUNCTION is required.")
-            :type (or function symbol)
-            :read-only t)
-  (priority 0 :type real :read-only t))
+(locally ; Out of responds.
+ (declare (optimize (speed 1)))
+ (defstruct vprinter
+   (type (error "TYPE is required.") :read-only t)
+   (function (error "FUNCTION is required.")
+             :type (or function symbol)
+             :read-only t)
+   (priority 0 :type real :read-only t)))
 
 ;;;; VPRINT-DISPATCH object.
 
@@ -143,6 +147,7 @@
 ;; DSL
 
 (defmacro define-vprint-dispatch (name &body clause+)
+  (declare (type list clause+))
   ;; Trivial syntax check.
   (check-type name symbol)
   (assert (<= (count :merge clause+ :key #'car) 1))
@@ -180,6 +185,7 @@
   ;; For debug use.
   (uiop:while-collecting (collect)
     (dotable ((key-type vprinter) vprint-dispatch)
+      (declare (optimize (speed 1))) ; key-type is run time value.
       (when (typep exp key-type)
         (collect vprinter)))))
 
@@ -199,8 +205,10 @@
                  (subtypep (vprinter-type (first vprinters))
                            (vprinter-type (second vprinters)))))
            (values (vprinter-function (car vprinters)) t))
-          ((< (vprinter-priority (first vprinters))
-              (vprinter-priority (second vprinters)))
+          ((locally ; due to real.
+            (declare (optimize (speed 1)))
+            (< (vprinter-priority (first vprinters))
+               (vprinter-priority (second vprinters))))
            (values (vprinter-function (car vprinters)) t))
           (t
            (warn "Could not determine vprinters. ~S" vprinters)
