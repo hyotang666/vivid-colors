@@ -2,26 +2,22 @@
 (in-package :asdf)
 (defsystem "vivid-colors"
   :version
-  "4.8.7"
+  "5.0.0"
   :depends-on
   (
    "uiop"                       ; Utilities. Implicitly depends on via asdf.
    "lambda-fiddle"              ; Utilities for lambda list processing.
-   "alexandria"                 ; Utilities, implicitly depends on via (cl-colors2 cl-ansi-text).
    "millet"                     ; Wrapper for implementation dependent utilities.
-   "trivial-gray-streams"       ; Wrapper for gray-streams.
    "closer-mop"                 ; Wrapper for Meta Object Protocols.
-   "cl-ansi-text"               ; ANSI color control sequence.
    "cl-colors2"                 ; Color objects. Implicitly depends on via cl-ansi-text.
-   "vivid-colors.shared"        ; Module the shared object.
-   "vivid-colors.content"       ; Module the content objects.
+   "vivid-colors.stream"        ; Module the vprint-stream.
    "vivid-colors.dispatch"      ; Module the vprint-dispatch.
+   "vivid-colors.content"       ; Module for reexporting.
    )
   :pathname
   "src/"
   :components
-  ((:file "package")
-   (:file "vivid-colors" :depends-on ("package")))
+  ((:file "vivid-colors"))
   :author "SATO Shinichi"
   :license "MIT"
   :description #.(concatenate 'string
@@ -50,6 +46,7 @@
           '((test-op "vivid-colors.queue.test")
             (test-op "vivid-colors.shared.test")
             (test-op "vivid-colors.content.test")
+            (test-op "vivid-colors.stream.test")
             (test-op "vivid-colors.test"))))
 ;; Enable passing parameter for JINGOH:EXAMINER via ASDF:TEST-SYSTEM.
 (defmethod operate :around
