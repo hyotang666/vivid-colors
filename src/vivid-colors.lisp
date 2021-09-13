@@ -114,9 +114,12 @@
     (vprint (vprint-pop) output t)
     (vprint-exit-if-list-exhausted)
     (write-char #\Space output)
+    (vprint-newline :fill output)
     (vprint-indent :current 0 output)
-    (vprint-newline :miser output)
-    (vprint-list output (cdr form) nil :fill)))
+    (loop (vprint (vprint-pop) output t)
+          (vprint-exit-if-list-exhausted)
+          (write-char #\Space output)
+          (vprint-newline :fill output))))
 
 (defun vprint-list (output list &optional (print-paren t) (newline-kind :fill))
   (cond
