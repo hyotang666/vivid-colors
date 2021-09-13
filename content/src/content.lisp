@@ -286,33 +286,38 @@
                         :key #'compute-length
                         :initial-value *position*)))))
 
+(defun miserp (rest section)
+  (and *print-miser-width*
+       *print-right-margin*
+       (<=
+         (- (the (mod #.array-total-size-limit) *print-right-margin*)
+            (start section))
+         (the (mod #.array-total-size-limit) *print-miser-width*))
+       (over-right-margin-p rest)))
+
 (defmethod print-content ((s section) (o stream))
   (setf (start s) *position*)
   (let ((*indent* (+ (start s) (length (prefix s)))))
-    (labels ((miserp (rest)
-               (and *print-miser-width*
-                    *print-right-margin*
-                    (<=
-                      (-
-                        (the (mod #.array-total-size-limit)
-                             *print-right-margin*)
-                        (start s))
-                      (the (mod #.array-total-size-limit) *print-miser-width*))
-                    (over-right-margin-p rest)))
-             (newline (newlinep)
-               (and newlinep (setf *newlinep* newlinep))
-               (terpri o)
-               (dotimes (x (setf *position* *indent*)) (write-char #\Space o)))
-             (indent (indent)
-               (setf *indent*
-                       (mcase:emcase indent-kind (indent-kind indent)
-                         (:block
-                           *indent*
-                           (+ (start s) (length (prefix s))
-                              (indent-width indent)))
-                         (:current
-                           *indent*
-                           (+ *position* (indent-width indent)))))))
+    (flet ((newline (newlinep)
+             (and newlinep (setf *newlinep* t))
+             (terpri o)
+             (dotimes
+                 (x
+                  (setf *position*
+                          (if (eq :miser newlinep)
+                              (setf *indent* (+ (start s) (length (prefix s))))
+                              *indent*)))
+               (write-char #\Space o)))
+           (indent (indent)
+             (setf *indent*
+                     (mcase:emcase indent-kind (indent-kind indent)
+                       (:block
+                         *indent*
+                         (+ (start s) (length (prefix s))
+                            (indent-width indent)))
+                       (:current
+                         *indent*
+                         (+ *position* (indent-width indent)))))))
       (cond
         ((or (not *print-pretty*)
              (and (not *newlinep*)
@@ -337,10 +342,10 @@
                        (newline
                         (let ((kind (newline-kind content)))
                           (mcase:emcase newline-kind kind
-                            ((:mandatory :linear) (newline t))
+                            ((:mandatory :linear) (newline :linear))
                             (:miser
-                              (when (miserp rest)
-                                (newline t)))
+                              (when (miserp rest s)
+                                (newline :miser)))
                             (:fill
                               (when (over-right-margin-p rest)
                                 (newline nil))))))
