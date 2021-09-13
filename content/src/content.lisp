@@ -342,7 +342,7 @@
                               (when (miserp rest)
                                 (newline t)))
                             (:fill
-                              (when (or (over-right-margin-p rest) *newlinep*)
+                              (when (over-right-margin-p rest)
                                 (newline nil))))))
                        (indent (indent content))))))))))
 
