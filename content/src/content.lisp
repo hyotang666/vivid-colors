@@ -155,7 +155,11 @@
                (write-char #\# output))
              (print-shared (shared printer)
                (write-char #\# output)
-               (write (vivid-colors.shared:id shared) :stream output :base 10)
+               (write
+                 (setf (vivid-colors.shared:id shared)
+                         (incf vivid-colors.shared:*shared-counter*))
+                 :stream output
+                 :base 10)
                (write-char #\= output)
                (funcall printer))
              (print-it ()
