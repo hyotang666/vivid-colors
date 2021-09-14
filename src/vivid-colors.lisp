@@ -14,14 +14,11 @@
                                                      #:vprint-indent
                                                      #:vprint-pop
                                                      #:vprint-exit-if-list-exhausted
-                                                     #:vprint-logical-block))
-       (:export ;;;; MAIN API
-                #:vprint ; like CL:PPRINT
-                )))
+                                                     #:vprint-logical-block
+						     #:vprint))
+       ))
 
 (in-package :vivid-colors)
-
-(defconstant +default-line-width+ 80)
 
 ;;;; UTILITIES
 
@@ -318,20 +315,3 @@
   (:merge :vivid :pretty))
 
 (setq *vprint-dispatch* (find-vprint-dispatch :standard))
-
-;;;; VPRINT
-
-(declaim
- (ftype (function (t &optional stream boolean) (values null &optional)) vprint))
-
-(defun vprint (exp &optional (output *standard-output*) recursivep)
-  (if recursivep
-      (funcall (coerce (vivid-colors.dispatch:vprint-dispatch exp) 'function)
-               output exp)
-      (let ((*print-right-margin*
-             (or *print-right-margin* +default-line-width+))
-            (*print-miser-width* (or *print-miser-width* 60)))
-        (vprint-logical-block (output nil)
-          (funcall
-            (coerce (vivid-colors.dispatch:vprint-dispatch exp) 'function)
-            output exp)))))

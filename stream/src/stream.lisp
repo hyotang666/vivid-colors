@@ -8,7 +8,8 @@
            #:vprint-newline
            #:vprint-pop
            #:vprint-exit-if-list-exhausted
-           #:vprint-logical-block))
+           #:vprint-logical-block
+	   #:vprint))
 
 (in-package :vivid-colors.stream)
 
@@ -128,7 +129,7 @@
 
 ;;;; DSL
 
-(eval-when (:compile-toplevel)
+(eval-when (:compile-toplevel :load-toplevel)
   ;; VPRINT-LOGICAL-BLOCK needs this eval-when.
   (defun <vlb-body> (<list> ?list ?stream ?block body)
     (labels ((<whole> ()
@@ -224,3 +225,22 @@
 
 (defmacro vprint-exit-if-list-exhausted ()
   (error 'out-of-scope :name 'vprint-exit-if-list-exhausted))
+
+;;;; VPRINT
+
+(defconstant +default-line-width+ 80)
+
+(declaim
+ (ftype (function (t &optional stream boolean) (values null &optional)) vprint))
+
+(defun vprint (exp &optional (output *standard-output*) recursivep)
+  (if recursivep
+      (funcall (coerce (vivid-colors.dispatch:vprint-dispatch exp) 'function)
+               output exp)
+      (let ((*print-right-margin*
+             (or *print-right-margin* +default-line-width+))
+            (*print-miser-width* (or *print-miser-width* 60)))
+        (vprint-logical-block (output nil)
+          (funcall
+            (coerce (vivid-colors.dispatch:vprint-dispatch exp) 'function)
+            output exp)))))

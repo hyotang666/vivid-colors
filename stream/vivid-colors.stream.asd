@@ -2,7 +2,7 @@
 (in-package :asdf)
 (defsystem "vivid-colors.stream"
   :version
-  "0.0.3"
+  "1.0.0"
   :depends-on
   (
    "uiop"                       ; Utilities implicitly depends on via asdf.
@@ -10,6 +10,7 @@
    "cl-ansi-text"               ; ANSI color escape sequence.
    "vivid-colors.content"       ; Module the content objects.
    "vivid-colors.shared"        ; Module the shared object.
+   "vivid-colors.dispatch"      ; Module the vprint-dispatch.
    )
   :pathname
   "src/"
