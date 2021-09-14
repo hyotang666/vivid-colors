@@ -95,13 +95,18 @@
   color)
 
 (defstruct (object (:constructor make-object
-                    (&key content color key &aux
+                    (&key content color key firstp &aux
                      (color
                       (etypecase color
                         (null color)
                         (cons (validate-color-spec color)))))))
+  ;; The lisp value.
   (content (error "CONTENT is required.") :type t :read-only t)
+  ;; Does this content in the first appearance in the expression?
+  (firstp t :type boolean :read-only t)
+  ;; Printed color.
   (color nil :type list :read-only t)
+  ;; Representation generator. e.g. string must have #\" around.
   (key #'prin1-to-string :type function :read-only t))
 
 (defmethod compute-length ((object object))
@@ -115,14 +120,14 @@
     (let* ((content (object-content object))
            (shared? (and *print-circle* (vivid-colors.shared:storedp content))))
       (cond ((not shared?) (object-length content))
-            ((vivid-colors.shared:only-once-p content) (object-length content))
-            ((vivid-colors.shared:already-printed-p content)
+            ((not (vivid-colors.shared:sharedp content))
+             (object-length content))
+            ((not (object-firstp object))
              (+ 2 ; For ##
                 (length
                   (write-to-string (vivid-colors.shared:id shared?)
                                    :base 10))))
             (t
-             (vivid-colors.shared:mark-printed content)
              ;; I do not know how to fix note below.
              ;; note: unable to open-code float conversion in mixed numric operation
              ;; due to type uncertainty:
@@ -160,25 +165,23 @@
               (if *print-vivid*
                   (print-colored)
                   (print-it))
-              (let ((shared? (vivid-colors.shared:storedp (object-content o))))
-                (if (vivid-colors.shared:only-once-p (object-content o))
-                    (if *print-vivid*
-                        (print-colored)
-                        (print-it))
-                    (if (vivid-colors.shared:already-printed-p
-                          (object-content o))
-                        (print-refer shared?)
+              (let ((shared? (vivid-colors.shared:sharedp (object-content o))))
+                (if shared?
+                    (if (object-firstp o)
                         (print-shared shared?
                                       (if *print-vivid*
                                           #'print-colored
-                                          #'print-it))))))
+                                          #'print-it))
+                        (print-refer shared?))
+                    (if *print-vivid*
+                        (print-colored)
+                        (print-it)))))
           (if (not *print-circle*)
               (print-it)
-              (let ((shared? (vivid-colors.shared:storedp (object-content o))))
-                (if (vivid-colors.shared:only-once-p (object-content o))
+              (let ((shared? (vivid-colors.shared:sharedp (object-content o))))
+                (if (not shared?)
                     (print-it)
-                    (if (vivid-colors.shared:already-printed-p
-                          (object-content o))
+                    (if (object-firstp o)
                         (print-refer shared?)
                         (print-shared shared? #'print-it)))))))
     (incf *position* (length notation)))
@@ -378,7 +381,7 @@
          (*position* 0)
          (*indent* 0)
          (*newlinep* nil))
-     (vivid-colors.shared:with-check-object-seen () ,@body)))
+     ,@body))
 
 (set-pprint-dispatch '(cons (member with-print-context))
                      (formatter

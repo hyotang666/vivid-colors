@@ -282,46 +282,84 @@
 ; Corner case: Is delimiter included?
 #?(compute-length (make-object :content "")) => 2
 
-; Case if object is shared and *print-circle* is true, #n= should be printed before contents notation.
-#?(vivid-colors.shared:context ()
-    (let ((string "dummy")
-	  (*print-circle* t))
+; Case if object is shared and *print-circle* is true and appear first, #n= should be printed before contents notation.
+; | *print-circle* | object-firstp | sharedp |
+; | -------------- | ------------- | ------- |
+; | t              | t             | t       |
+#?(let ((string "dummy")
+	(*print-circle* t))
+    (vivid-colors.shared:context ()
       (vivid-colors.shared:store string)
       (vivid-colors.shared:store string)
-      (vivid-colors.shared:with-check-object-seen ()
-        (compute-length (make-object :content string)))))
+      (setf (vivid-colors.shared:id (vivid-colors.shared:storedp string)) 0)
+      (compute-length (make-object :content string))))
 :equivalents (+ 3 ; #n=
 		(length (prin1-to-string "dummy")))
 
-; When *print-cirlce* is NIL.
-#?(vivid-colors.shared:context ()
-    (let ((string "dummy")
-	  (*print-circle*)) ; <--- NOTE!
+; | t             | t              | nil     |
+#?(let ((string "dummy")
+	(*print-circle* t))
+    (vivid-colors.shared:context ()
       (vivid-colors.shared:store string)
-      (vivid-colors.shared:store string)
-      (vivid-colors.shared:with-check-object-seen ()
-        (compute-length (make-object :content string)))))
+      (setf (vivid-colors.shared:id (vivid-colors.shared:storedp string)) 0)
+      (compute-length (make-object :content string))))
 :equivalents (length (prin1-to-string "dummy"))
 
-; Case if object is shared and already printed and *print-circle* is true, #n# is printed.
-#?(vivid-colors.shared:context ()
-    (let ((string "dummy")
-	  (*print-circle* t))
+; | t             | nil            | nil     |
+#?(let ((string "dummy")
+	(*print-circle* t))
+    (vivid-colors.shared:context ()
       (vivid-colors.shared:store string)
-      (vivid-colors.shared:store string)
-      (vivid-colors.shared:with-check-object-seen ()
-        (vivid-colors.shared:mark-printed string)
-        (compute-length (make-object :content string)))))
-=> 3
+      (setf (vivid-colors.shared:id (vivid-colors.shared:storedp string)) 0)
+      (compute-length (make-object :content string :firstp nil))))
+:equivalents (length (prin1-to-string "dummy"))
 
-#?(vivid-colors.shared:context ()
-    (let ((string "dummy")
-	  (*print-circle*)) ; <--- NOTE!
+; | t             | nil            | t       |
+#?(let ((string "dummy")
+	(*print-circle* t))
+    (vivid-colors.shared:context ()
       (vivid-colors.shared:store string)
       (vivid-colors.shared:store string)
-      (vivid-colors.shared:with-check-object-seen ()
-        (vivid-colors.shared:mark-printed string)
-        (compute-length (make-object :content string)))))
+      (setf (vivid-colors.shared:id (vivid-colors.shared:storedp string)) 0)
+      (compute-length (make-object :content string :firstp nil))))
+:equivalents (length "#0#")
+
+; | nil           | t              | t       |
+#?(let ((string "dummy")
+	(*print-circle* nil))
+    (vivid-colors.shared:context ()
+      (vivid-colors.shared:store string)
+      (vivid-colors.shared:store string)
+      (setf (vivid-colors.shared:id (vivid-colors.shared:storedp string)) 0)
+      (compute-length (make-object :content string))))
+:equivalents (length (prin1-to-string "dummy"))
+
+; | nil           | t              | nil     |
+#?(let ((string "dummy")
+	(*print-circle* nil))
+    (vivid-colors.shared:context ()
+      (vivid-colors.shared:store string)
+      (setf (vivid-colors.shared:id (vivid-colors.shared:storedp string)) 0)
+      (compute-length (make-object :content string))))
+:equivalents (length (prin1-to-string "dummy"))
+
+; | nil           | nil            | t       |
+#?(let ((string "dummy")
+	(*print-circle* nil))
+    (vivid-colors.shared:context ()
+      (vivid-colors.shared:store string)
+      (vivid-colors.shared:store string)
+      (setf (vivid-colors.shared:id (vivid-colors.shared:storedp string)) 0)
+      (compute-length (make-object :content string :firstp nil))))
+:equivalents (length (prin1-to-string "dummy"))
+
+; | nil           | nil            | nil     |
+#?(let ((string "dummy")
+	(*print-circle* nil))
+    (vivid-colors.shared:context ()
+      (vivid-colors.shared:store string)
+      (setf (vivid-colors.shared:id (vivid-colors.shared:storedp string)) 0)
+      (compute-length (make-object :content string :firstp nil))))
 :equivalents (length (prin1-to-string "dummy"))
 
 ; Case colored-string.
