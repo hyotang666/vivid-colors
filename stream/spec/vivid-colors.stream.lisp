@@ -49,9 +49,9 @@
     (put-strings '("1" ("2" #.cl-colors2:+red+)) vs)
     (vivid-colors.content::contents-list (vivid-colors.stream::section vs)))
 :satisfies (lambda (list)
-	     (& (equalp list
-			(list (vivid-colors.content::make-colored-string
-				:spec '("1" ("2" #.cl-colors2:+red+)))))))
+             (& (equalp list
+                        (list (vivid-colors.content::make-colored-string
+                                :spec '("1" ("2" #.cl-colors2:+red+)))))))
 
 ;;;; Notes:
 ; Acutually printing is not done.
@@ -99,24 +99,27 @@
 ;;;; Side-Effects:
 ; Modify VPRINT-STREAM state.
 #?(let ((vs (make-instance 'vivid-colors.stream::vprint-stream)))
-    (values (copy-list (vivid-colors.content::contents-list (vivid-colors.stream::section vs)))
-	    (put #\a vs)
-	    (vivid-colors.content::contents-list (vivid-colors.stream::section vs))))
+    (vivid-colors.shared:context ()
+      (values (copy-list (vivid-colors.content::contents-list (vivid-colors.stream::section vs)))
+                     (put #\a vs)
+                (vivid-colors.content::contents-list (vivid-colors.stream::section vs)))))
 :multiple-value-satisfies
 (lambda (before put after)
   (& (null before)
      (eql #\a put)
      (equalp after (list (vivid-colors.content::make-object
-			   :content #\a)))))
+                           :content #\a)))))
 
 ;;;; Notes:
 ; Because above side effect, you should use PUT rather than WRITE for VPRINT-STREAM.
 
 ;;;; Exceptional-Situations:
+; If dynamic context is not achieved, an error is signaled.
+#?(put t (make-instance 'vivid-colors.stream::vprint-stream)) :signals program-error
 
 (requirements-about VPRINT-NEWLINE :doc-type function
-		    :around (let ((*print-pretty* t))
-			      (call-body)))
+                    :around (let ((*print-pretty* t))
+                              (call-body)))
 
 ;;;; Description:
 
@@ -142,8 +145,8 @@
     (vprint-newline :linear vs)
     (vivid-colors.content::contents-list (vivid-colors.stream::section vs)))
 :satisfies (lambda (list)
-	     (& (equalp list
-			(list (vivid-colors.content::make-newline :kind :linear)))))
+             (& (equalp list
+                        (list (vivid-colors.content::make-newline :kind :linear)))))
 
 ;;;; Notes:
 
@@ -177,13 +180,13 @@
 ; Modify VPRINT-STREAM state.
 #?(let ((vs (make-instance 'vivid-colors.stream::vprint-stream)))
     (values (vivid-colors.content::contents-list (vivid-colors.stream::section vs))
-	    (progn (vprint-indent :block 3 vs)
-		   (vivid-colors.content::contents-list (vivid-colors.stream::section vs)))))
+            (progn (vprint-indent :block 3 vs)
+                   (vivid-colors.content::contents-list (vivid-colors.stream::section vs)))))
 :multiple-value-satisfies
 (lambda (before after)
   (& (null before)
      (equalp after
-	     (list (vivid-colors.content::make-indent :width 3)))))
+             (list (vivid-colors.content::make-indent :width 3)))))
 
 ;;;; Notes:
 
@@ -224,17 +227,17 @@
 ; vivid-colors.stream::*vstream*
 ; If *VSTREAM* is unbound, VPRINT-STREAM is newly allocated.
 #?(values (boundp 'vivid-colors.stream::*vstream*)
-	  (vprint-logical-block (nil nil)
+          (vprint-logical-block (nil nil)
             (boundp 'vivid-colors.stream::*vstream*)))
 :values (nil t)
 
 ; If *VSTREAM* is already bound, its section is modified.
 #?(let* ((vs (make-instance 'vivid-colors.stream::vprint-stream))
-	 (vivid-colors.stream::*vstream* vs)
-	 (sec (vivid-colors.stream::section vivid-colors.stream::*vstream*)))
+         (vivid-colors.stream::*vstream* vs)
+         (sec (vivid-colors.stream::section vivid-colors.stream::*vstream*)))
     (vprint-logical-block (nil nil)
       (values (eq vs vivid-colors.stream::*vstream*)
-	      (eq sec (vivid-colors.stream::section vivid-colors.stream::*vstream*)))))
+              (eq sec (vivid-colors.stream::section vivid-colors.stream::*vstream*)))))
 :values (T NIL)
 
 ;;;; Side-Effects:
@@ -253,8 +256,8 @@
 
 #?(vprint-logical-block (nil (list 0 1 2))
     (loop :for elt = (vprint-pop)
-	  :do (put elt *standard-output*)
-	  (vprint-exit-if-list-exhausted)))
+          :do (put elt *standard-output*)
+          (vprint-exit-if-list-exhausted)))
 :outputs "012"
 
 ;;;; Exceptional-Situations:
