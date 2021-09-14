@@ -4,15 +4,13 @@
   (:use :cl)
   (:shadow count)
   (:export #:context ; DSL.
-           #:id ; Reader.
+           #:id ; Accessor.
            #:count ; Accessor.
            #:store ; Modifier.
            #:storedp ; Predicate.
            #:should-do-p
-           #:only-once-p
-           #:with-check-object-seen
-           #:already-printed-p
-           #:mark-printed))
+           #:sharedp
+           #:*shared-counter*))
 
 (in-package :vivid-colors.shared)
 
@@ -30,9 +28,9 @@
 ;;;; SHARED.
 ;; To support *print-circle*
 
-(declaim (type (or null (integer 0 #.most-positive-fixnum)) *shared-count*))
+(declaim (type (or null (integer 0 #.most-positive-fixnum)) *shared-counter*))
 
-(defparameter *shared-count* nil)
+(defparameter *shared-counter* nil)
 
 (declaim
  (type (or null hash-table) ; :TEST must be #'EQ.
@@ -41,15 +39,18 @@
 (defparameter *shared-objects* nil)
 
 (defmacro context (() &body body)
-  `(let ((*shared-count* (or *shared-count* 0))
+  `(let ((*shared-counter* (or *shared-counter* 0))
          (*shared-objects* (or *shared-objects* (make-hash-table :test #'eq))))
      ,@body))
 
 (defstruct (shared (:predicate nil) (:conc-name nil))
-  (id (error "ID is required.")
-      :type (integer 0 #.most-positive-fixnum)
-      :read-only t)
-  (count 0 :type (integer 0 #.most-positive-fixnum)))
+  ;; Integer to identify object.
+  ;; This is set when printing because we do not know actually printing it.
+  ;; ID is used only the content satisfies SHOULD-DO-P and
+  ;; reffered by two or more times and *print-circle* is true.
+  (id nil :type (or null (integer 0 #.most-positive-fixnum)))
+  ;; How many times appear in the expression?
+  (count 1 :type (integer 1 #.most-positive-fixnum)))
 
 (defun storedp (object)
   (if *shared-objects*
@@ -63,41 +64,21 @@
     (let ((shared? (storedp object)))
       (if shared?
           (incf (count shared?))
-          (progn
-           (setf (gethash object *shared-objects*)
-                   (make-shared :id *shared-count*))
-           (incf *shared-count*)))))
+          (setf (gethash object *shared-objects*) (make-shared)))))
   object)
 
 (defun should-do-p (exp)
+  "Should EXP be shared?"
   (not
     (or (and (symbolp exp) (symbol-package exp))
         (characterp exp)
         (numberp exp))))
 
-(defun only-once-p (exp)
+(defun sharedp (exp)
+  "Actually shared by two or more times?"
   (let ((shared? (storedp exp)))
-    (if shared?
-        (zerop (count shared?))
-        t)))
-
-;;;; SEEN?
-
-(defvar *seen?* nil)
-
-(defmacro with-check-object-seen (() &body body)
-  `(let ((*seen?* (or *seen?* (make-hash-table :test #'eq))))
-     ,@body))
-
-(defun already-printed-p (exp)
-  (if *seen?*
-      (values (gethash exp *seen?*))
-      (error 'without-context :name 'with-check-object-seen)))
-
-(defun mark-printed (exp)
-  (if *seen?*
-      (setf (gethash exp *seen?*) t)
-      (error 'without-context :name 'with-check-object-seen)))
+    (and shared?
+        (< 1 (count shared?)))))
 
 (defun pprint-context (output exp)
   (funcall
@@ -110,5 +91,5 @@
                     "~:>"))
     output exp))
 
-(set-pprint-dispatch '(cons (member context with-check-object-seen))
+(set-pprint-dispatch '(cons (member context))
                      'pprint-context)
