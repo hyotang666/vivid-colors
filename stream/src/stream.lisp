@@ -70,7 +70,7 @@
 
 (declaim
  (ftype (function
-         (t vprint-stream &key (:color (or cl-ansi-text:color-specifier cons))
+         (t vprint-stream &key (:color (or cl-ansi-text:color-specifier list))
           (:key (or symbol function)))
          (values t &optional))
         put))

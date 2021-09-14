@@ -81,6 +81,10 @@
 :signals condition
 #?(put t (make-instance 'vivid-colors.stream::vprint-stream) :color (list cl-colors2:+red+ :style :unknown-style))
 :signals condition
+#?(vivid-colors.shared:context ()
+    (put t (make-instance 'vivid-colors.stream::vprint-stream)
+	 :color nil))
+=> T
 
 ; key := (or symbol function), otherwise implementation dependent condition.
 #?(put t (make-instance 'vivid-colors.stream::vprint-stream) :key "not function designator")
