@@ -15,8 +15,7 @@
                                                      #:vprint-pop
                                                      #:vprint-exit-if-list-exhausted
                                                      #:vprint-logical-block
-						     #:vprint))
-       ))
+                                                     #:vprint))))
 
 (in-package :vivid-colors)
 
@@ -169,7 +168,7 @@
   (vprint-logical-block (output nil :prefix "#S(" :suffix ")")
     (vprint (type-of structure) output)
     (write-char #\Space output)
-    (vprint-indent :current 0 output)
+    (vprint-newline :linear output)
     (loop :for (slot . rest) :on (c2mop:class-slots (class-of structure))
           :for name = (c2mop:slot-definition-name slot)
           :do (vprint (intern (symbol-name name) :keyword) output t)
