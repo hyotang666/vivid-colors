@@ -75,6 +75,7 @@
 (requirements-about STORE :doc-type function)
 
 ;;;; Description:
+; Evaluated to be true only if object actualy stored.
 
 #+syntax (STORE object) ; => result
 
@@ -82,7 +83,7 @@
 
 ; object := T
 
-; result := object.
+; result := BOOLEAN
 
 ;;;; Affected By:
 ; none
@@ -93,7 +94,7 @@
     (values (hash-table-count vivid-colors.shared::*shared-objects*)
 	    (store "dummy")
             (hash-table-count vivid-colors.shared::*shared-objects*)))
-:values (0 "dummy" 1)
+:values (0 T 1)
 
 ; When same (means (satisfies EQ)) object is stored some times,
 ; it is counted.
@@ -102,7 +103,7 @@
     (values (count (storedp ""))
 	    (store "")
 	    (count (storedp ""))))
-:values (1 "" 2)
+:values (1 NIL 2)
 
 ;;;; Notes:
 ; The symbols which is interned, numbers, and characters are not stored.
@@ -114,7 +115,7 @@
 	    (store #\a)
             (hash-table-count vivid-colors.shared::*shared-objects*)
 	    *shared-counter*))
-:values (0 0 t 0 #\a 0 0)
+:values (0 0 NIL NIL NIL 0 0)
 
 ;;;; Exceptional-Situations:
 ; If called without CONTEXT context, an error is signaled.

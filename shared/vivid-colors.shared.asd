@@ -2,7 +2,7 @@
 (in-package :asdf)
 (defsystem "vivid-colors.shared"
   :version
-  "1.0.0"
+  "1.1.0"
   :depends-on
   (
    "alexandria" ; Utilities.

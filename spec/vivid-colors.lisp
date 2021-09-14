@@ -141,6 +141,10 @@
 #?(vprint '(let () . dot))
 :outputs "(LET () . DOT)"
 
+#?(let ((*print-circle* t))
+    (vprint '(#0=#:a #0#)))
+:outputs "(#1=#:A #1#)"
+
 (requirements-about *PRINT-VIVID* :doc-type variable
 		    :around (let ((*print-pretty* t))
 			      (call-body)))

@@ -80,8 +80,9 @@
         &key color (key #'prin1-to-string)
         &aux (key (coerce key 'function)))
   (vivid-colors.content:add-content
-    (vivid-colors.content:make-object :content (vivid-colors.shared:store
-                                                 content)
+    (vivid-colors.content:make-object :content content
+                                      :firstp (vivid-colors.shared:store
+                                                content)
                                       :color (uiop:ensure-list color)
                                       :key key)
     (section output))
@@ -139,8 +140,10 @@
                              `(if (consp ,',?list)
                                   (prog1 (car ,',?list)
                                     (setf ,',?list
-                                            (vivid-colors.shared:store
-                                              (cdr ,',?list))))
+                                            (progn
+                                             (vivid-colors.shared:store
+                                               (cdr ,',?list))
+                                             (cdr ,',?list))))
                                   (prog1 ,',?list
                                     (write-char #\. ,',?stream)
                                     (write-char #\Space ,',?stream)

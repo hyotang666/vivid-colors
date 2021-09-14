@@ -58,14 +58,14 @@
       (error 'without-context :name 'context)))
 
 (defun store (object)
+  "Evaluated to be T only if actualy stored."
   (unless *shared-objects*
     (error 'without-context :name 'context))
   (when (should-do-p object)
     (let ((shared? (storedp object)))
       (if shared?
-          (incf (count shared?))
-          (setf (gethash object *shared-objects*) (make-shared)))))
-  object)
+          (tagbody (incf (count shared?)))
+          (progn (setf (gethash object *shared-objects*) (make-shared)) t)))))
 
 (defun should-do-p (exp)
   "Should EXP be shared?"
@@ -77,8 +77,7 @@
 (defun sharedp (exp)
   "Actually shared by two or more times?"
   (let ((shared? (storedp exp)))
-    (and shared?
-        (< 1 (count shared?)))))
+    (and shared? (< 1 (count shared?)))))
 
 (defun pprint-context (output exp)
   (funcall
@@ -91,5 +90,4 @@
                     "~:>"))
     output exp))
 
-(set-pprint-dispatch '(cons (member context))
-                     'pprint-context)
+(set-pprint-dispatch '(cons (member context)) 'pprint-context)

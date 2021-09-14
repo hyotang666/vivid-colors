@@ -169,7 +169,7 @@
               (if *print-vivid*
                   (print-colored)
                   (print-it))
-              (let ((shared? (vivid-colors.shared:sharedp (object-content o))))
+              (let ((shared? (vivid-colors.shared:storedp (object-content o))))
                 (if shared?
                     (if (object-firstp o)
                         (print-shared shared?
@@ -182,12 +182,12 @@
                         (print-it)))))
           (if (not *print-circle*)
               (print-it)
-              (let ((shared? (vivid-colors.shared:sharedp (object-content o))))
+              (let ((shared? (vivid-colors.shared:storedp (object-content o))))
                 (if (not shared?)
                     (print-it)
                     (if (object-firstp o)
-                        (print-refer shared?)
-                        (print-shared shared? #'print-it)))))))
+                        (print-shared shared? #'print-it)
+                        (print-refer shared?)))))))
     (incf *position* (length notation)))
   o)
 

@@ -101,14 +101,14 @@
 #?(let ((vs (make-instance 'vivid-colors.stream::vprint-stream)))
     (vivid-colors.shared:context ()
       (values (copy-list (vivid-colors.content::contents-list (vivid-colors.stream::section vs)))
-                     (put #\a vs)
-                (vivid-colors.content::contents-list (vivid-colors.stream::section vs)))))
+	      (put #\a vs)
+	      (vivid-colors.content::contents-list (vivid-colors.stream::section vs)))))
 :multiple-value-satisfies
 (lambda (before put after)
   (& (null before)
      (eql #\a put)
      (equalp after (list (vivid-colors.content::make-object
-                           :content #\a)))))
+                           :content #\a :firstp nil)))))
 
 ;;;; Notes:
 ; Because above side effect, you should use PUT rather than WRITE for VPRINT-STREAM.
