@@ -80,7 +80,8 @@
         &key color (key #'prin1-to-string)
         &aux (key (coerce key 'function)))
   (vivid-colors.content:add-content
-    (vivid-colors.content:make-object :content content
+    (vivid-colors.content:make-object :content (vivid-colors.shared:store
+                                                 content)
                                       :color (uiop:ensure-list color)
                                       :key key)
     (section output))
@@ -136,19 +137,18 @@
              (<body> ()
                `(macrolet ((vprint-pop ()
                              `(if (consp ,',?list)
-                                  (prog1
-                                      (vivid-colors.shared:store
-                                        (car ,',?list))
+                                  (prog1 (car ,',?list)
                                     (setf ,',?list
                                             (vivid-colors.shared:store
                                               (cdr ,',?list))))
-                                  (prog1 (vivid-colors.shared:store ,',?list)
+                                  (prog1 ,',?list
                                     (write-char #\. ,',?stream)
                                     (write-char #\Space ,',?stream)
                                     (setf ,',?list nil))))
                            (vprint-exit-if-list-exhausted ()
                              `(unless ,',?list
                                 (return-from ,',?block (values)))))
+                  (vivid-colors.shared:store ,?list)
                   ,@body)))
       (cond ((typep <list> '(cons (eql the) (cons (eql list)))) (<body>))
             ((not (constantp <list>)) (<whole>))
@@ -208,7 +208,6 @@
                                            :suffix ,(<xxxfix> <list> l
                                                               suffix)))))
             (*vstream* ,var))
-       (declare (ignorable ,l))
        (vivid-colors.shared:context ()
          (block ,b
            (unwind-protect ,(<vlb-body> <list> l var b body)
