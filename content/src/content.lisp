@@ -179,31 +179,19 @@
                (funcall printer))
              (print-it ()
                (write-string notation output)))
-      (if (object-color o)
-          (if (not *print-circle*)
-              (if *print-vivid*
-                  (print-colored)
-                  (print-it))
-              (let ((shared? (vivid-colors.shared:sharedp (object-content o))))
-                (if (and shared?
-                         (vivid-colors.shared:sharedp (object-content o)))
-                    (if (object-firstp o)
-                        (print-shared shared?
-                                      (if *print-vivid*
-                                          #'print-colored
-                                          #'print-it))
-                        (print-refer shared?))
-                    (if *print-vivid*
-                        (print-colored)
-                        (print-it)))))
-          (if (not *print-circle*)
-              (print-it)
-              (let ((shared? (vivid-colors.shared:sharedp (object-content o))))
-                (if (not shared?)
-                    (print-it)
-                    (if (object-firstp o)
-                        (print-shared shared? #'print-it)
-                        (print-refer shared?)))))))
+      (or (let (shared?)
+            (when (and *print-circle*
+                       (setf shared?
+                               (vivid-colors.shared:sharedp
+                                 (object-content o))))
+              (if (not (object-firstp o))
+                  (print-refer shared?)
+                  (if (and *print-vivid* (object-color o))
+                      (print-shared shared? #'print-colored)
+                      (print-shared shared? #'print-it)))))
+          (if (and *print-vivid* (object-color o))
+              (print-colored)
+              (print-it))))
     (incf *position* (length notation)))
   o)
 
