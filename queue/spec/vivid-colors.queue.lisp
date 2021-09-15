@@ -114,7 +114,8 @@
 ; body := Implicit progn.
 
 ; result := The return value of <return>.
-#?(for-each (v (new) :this-is-returned))
+#?(for-each (v (new) :this-is-returned)
+    (declare (ignore v)))
 => :THIS-IS-RETURNED
 
 ;;;; Affected By:

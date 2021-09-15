@@ -2,11 +2,12 @@
 (in-package :asdf)
 (defsystem "vivid-colors.queue"
   :version
-  "0.0.1"
+  "0.0.2"
   :depends-on
   (
    "millet"     ; Wrapper for implementation dependent tiny utilities.
    "uiop"       ; Utilities, implicitly depends on via asdf.
+   "alexandria" ; Utilities.
    )
   :pathname
   "src/"

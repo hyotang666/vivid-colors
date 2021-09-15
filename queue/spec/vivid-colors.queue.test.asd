@@ -2,7 +2,7 @@
 (in-package :asdf)
 (defsystem "vivid-colors.queue.test"
   :version
-  "0.0.0"
+  "0.0.1"
   :depends-on
   (:jingoh "vivid-colors.queue")
   :components

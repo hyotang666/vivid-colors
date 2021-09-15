@@ -43,5 +43,8 @@
   (let ((vars (uiop:ensure-list var)))
     `(loop :for ,vars :on (cdr (queue-head ,<queue>))
                 :by (lambda (x) (nthcdr ,(count-cons vars) x))
-           :do (tagbody ,@body)
+           :do (destructuring-bind
+                   ,(alexandria:flatten vars)
+                   (list ,@(alexandria:flatten vars))
+                 ,@body)
            :finally (return ,<return>))))
