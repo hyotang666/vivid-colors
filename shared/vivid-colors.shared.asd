@@ -5,7 +5,6 @@
   "1.1.0"
   :depends-on
   (
-   "alexandria" ; Utilities.
    )
   :pathname
   "src/"
