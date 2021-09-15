@@ -9,7 +9,7 @@
            #:vprint-pop
            #:vprint-exit-if-list-exhausted
            #:vprint-logical-block
-	   #:vprint))
+           #:vprint))
 
 (in-package :vivid-colors.stream)
 

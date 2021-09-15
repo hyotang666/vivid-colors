@@ -8,7 +8,10 @@
        ,@(reexport-from :vivid-colors.dispatch '(#:*vprint-dispatch*
                                                   #:define-vprint-dispatch
                                                   #:in-vprint-dispatch
-                                                  #:find-vprint-dispatch))
+                                                  #:find-vprint-dispatch
+						  #:dispatch-key-confliction
+						  #:replace-by-new
+						  #:keep-old))
        ,@(reexport-from :vivid-colors.stream '(#:put #:put-strings
                                                      #:vprint-newline
                                                      #:vprint-indent
