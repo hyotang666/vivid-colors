@@ -199,6 +199,13 @@
     (vprint-list output (cdr backquote) nil))
   (values))
 
+#+sbcl
+(defun vprint-comma (output comma)
+  (vprint-logical-block (output nil :prefix
+                         (nth (sb-impl::comma-kind comma) '("," ",." ",@")))
+    (vprint (sb-impl::comma-expr comma) output t))
+  (values))
+
 (defun vprint-let (output exp)
   (vprint-logical-block (output exp :prefix "(" :suffix ")")
     (vprint (vprint-pop) output t) ; operator.
@@ -302,6 +309,8 @@
   (:set '(cons (member quote)) 'vprint-quote)
   (:set '(cons (member function)) 'vprint-function)
   (:set '(cons (member #.(or #+sbcl 'sb-int:quasiquote))) 'vprint-backquote)
+  #+sbcl
+  (:set 'sb-impl::comma 'vprint-comma)
   (:set '(cons (member let let* symbol-macrolet)) 'vprint-let)
   (:set '(cons (member if)) 'vprint-if)
   (:set '(cons (member progn locally tagbody)) 'vprint-progn)
