@@ -10,9 +10,9 @@
 ; Makind shared object context.
 
 #?(values *shared-counter*
-	  vivid-colors.shared::*shared-objects*
-	  (context () *shared-counter*)
-	  (context () vivid-colors.shared::*shared-objects*))
+          vivid-colors.shared::*shared-objects*
+          (context () *shared-counter*)
+          (context () vivid-colors.shared::*shared-objects*))
 :multiple-value-satisfies
 (lambda (first second third fourth)
   (& (null first)
@@ -23,7 +23,7 @@
 ; Only one context is made.
 #?(context ()
     (eq vivid-colors.shared::*shared-objects*
-	(context () vivid-colors.shared::*shared-objects*)))
+        (context () vivid-colors.shared::*shared-objects*)))
 => T
 
 #?(context ()
@@ -92,29 +92,30 @@
 ; Modify *SHARED-OBJECTS*
 #?(context ()
     (values (hash-table-count vivid-colors.shared::*shared-objects*)
-	    (store "dummy")
+            (store "dummy")
             (hash-table-count vivid-colors.shared::*shared-objects*)))
 :values (0 T 1)
 
 ; When same (means (satisfies EQ)) object is stored some times,
 ; it is counted.
-#?(context ()
-    (store "")
-    (values (count (storedp ""))
-	    (store "")
-	    (count (storedp ""))))
+#?(let ((string "dummy"))
+    (context ()
+      (store string)
+      (values (count (storedp string))
+                (store string)
+                (count (storedp string)))))
 :values (1 NIL 2)
 
 ;;;; Notes:
 ; The symbols which is interned, numbers, and characters are not stored.
 #?(context ()
     (values (hash-table-count vivid-colors.shared::*shared-objects*)
-	    *shared-counter*
-	    (store t)
-	    (store 0)
-	    (store #\a)
+            *shared-counter*
+            (store t)
+            (store 0)
+            (store #\a)
             (hash-table-count vivid-colors.shared::*shared-objects*)
-	    *shared-counter*))
+            *shared-counter*))
 :values (0 0 NIL NIL NIL 0 0)
 
 ;;;; Exceptional-Situations:
@@ -133,9 +134,10 @@
 
 ; result := (or null vivid-colors.shared::shared)
 #?(context () (storedp t)) => NIL
-#?(context ()
-    (store "")
-    (storedp ""))
+#?(let ((string "dummy"))
+    (context ()
+      (store string)
+      (storedp string)))
 :be-the vivid-colors.shared::shared
 
 ;;;; Affected By:
@@ -190,11 +192,17 @@
 #?(context () (sharedp t)) => NIL
 
 ; Case stored only once.
-#?(context () (store "") (sharedp "")) => NIL
+#?(let ((string "dummy"))
+    (context ()
+      (store string)
+      (sharedp string)))
+=> NIL
 
 ; Case stored sometimes.
-#?(context () (dotimes (x 2) (store ""))
-    (sharedp ""))
+#?(let ((string "dummy"))
+    (context ()
+      (dotimes (x 2) (store string))
+      (sharedp string)))
 => T
 
 #+syntax (SHAREDP exp) ; => result
