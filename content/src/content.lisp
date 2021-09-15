@@ -69,7 +69,12 @@
   ;; ccl needs this eval-when. [1]
   ;; LOOP macro in the method PRINT-CONTENT for SECTION use :OF-TYPE declaration.
   ;; CCL needs the knowledge about the type CONTENT in compile time.
-  (defstruct indent
+  (defstruct (indent #+clisp
+                     (:constructor make-indent
+                      (&key kind width &aux
+                       (kind (progn (check-type kind indent-kind) kind))
+                       (width
+                        (progn (check-type width (unsigned-byte 8)) width)))))
     (kind :block :type indent-kind :read-only t)
     (width 0 :type (unsigned-byte 8) :read-only t)))
 
@@ -82,7 +87,10 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   ;; [1]
-  (defstruct newline
+  (defstruct (newline #+clisp
+                      (:constructor make-newline
+                       (&key kind &aux
+                        (kind (progn (check-type kind newline-kind) kind)))))
     (kind (error "KIND is required.") :type newline-kind :read-only t)))
 
 (defmethod compute-length ((n newline)) 0)
@@ -107,7 +115,8 @@
                        (color
                         (etypecase color
                           (null color)
-                          (cons (validate-color-spec color)))))))
+                          (cons (validate-color-spec color))))
+                       #+clisp (key (progn (check-type key function) key)))))
     ;; The lisp value.
     (content (error "CONTENT is required.") :type t :read-only t)
     ;; Does this content in the first appearance in the expression?
@@ -254,7 +263,23 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   ;; [1]
-  (defstruct (section (:conc-name nil))
+  (defstruct (section (:conc-name nil)
+                      #+clisp
+                      (:constructor make-section
+                       (&key start prefix contents suffix &aux
+                        (start
+                          (progn
+                           (check-type start
+                                       (integer 0 #.most-positive-fixnum))
+                           start))
+                        (prefix
+                          (progn (check-type prefix simple-string) prefix))
+                        (contents
+                          (progn
+                           (check-type contents vivid-colors.queue:queue)
+                           contents))
+                        (suffix
+                          (progn (check-type suffix simple-string) suffix)))))
     ;; Set by PRINCed.
     (start 0 :type (integer 0 #.most-positive-fixnum))
     (prefix "" :type simple-string :read-only t)
@@ -424,4 +449,8 @@
         ((:pretty *print-pretty*) *print-pretty*)
         ((:right-margin *print-right-margin*) *print-right-margin*)
         ((:miser-width *print-miser-width*) *print-miser-width*))
+  #+clisp
+  (progn
+   (check-type *print-right-margin* (or null unsigned-byte))
+   (check-type *print-miser-width* (or null unsigned-byte)))
   (with-print-context () (print-content content stream)))
