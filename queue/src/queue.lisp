@@ -14,7 +14,9 @@
 (declaim (optimize speed))
 
 (defstruct (queue (:constructor new
-                   (&key (type t) &aux (head (cons :head nil)) (tail head))))
+                   (&key (type t) &aux (head (cons :head nil)) (tail head)
+                    (type ; clisp needs.
+                     (progn (assert (millet:type-specifier-p type)) type)))))
   head
   (tail (error "TAIL is required."))
   (type t :type (satisfies millet:type-specifier-p) :read-only t))
