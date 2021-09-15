@@ -243,4 +243,5 @@
         (vprint-logical-block (output nil)
           (funcall
             (coerce (vivid-colors.dispatch:vprint-dispatch exp) 'function)
-            output exp)))))
+            output exp))))
+  nil)
