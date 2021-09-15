@@ -7,8 +7,7 @@
            #:id ; Accessor.
            #:count ; Accessor.
            #:store ; Modifier.
-           #:storedp ; Predicate.
-           #:should-do-p
+           #:should-do-p ; Predicate.
            #:sharedp
            #:*shared-counter*))
 
@@ -77,7 +76,8 @@
 (defun sharedp (exp)
   "Actually shared by two or more times?"
   (let ((shared? (storedp exp)))
-    (and shared? (< 1 (count shared?)))))
+    (when (and shared? (< 1 (count shared?)))
+      shared?)))
 
 (defun pprint-context (output exp)
   (funcall

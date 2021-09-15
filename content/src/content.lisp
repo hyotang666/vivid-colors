@@ -135,10 +135,8 @@
       (ftype (function (t) (values (mod #.array-total-size-limit) &optional))
              object-length))
     (let* ((content (object-content object))
-           (shared? (and *print-circle* (vivid-colors.shared:storedp content))))
+           (shared? (and *print-circle* (vivid-colors.shared:sharedp content))))
       (cond ((not shared?) (object-length content))
-            ((not (vivid-colors.shared:sharedp content))
-             (object-length content))
             ((not (object-firstp object))
              (+ 2 ; For ##
                 (length
@@ -186,8 +184,9 @@
               (if *print-vivid*
                   (print-colored)
                   (print-it))
-              (let ((shared? (vivid-colors.shared:storedp (object-content o))))
-                (if shared?
+              (let ((shared? (vivid-colors.shared:sharedp (object-content o))))
+                (if (and shared?
+                         (vivid-colors.shared:sharedp (object-content o)))
                     (if (object-firstp o)
                         (print-shared shared?
                                       (if *print-vivid*
@@ -199,7 +198,7 @@
                         (print-it)))))
           (if (not *print-circle*)
               (print-it)
-              (let ((shared? (vivid-colors.shared:storedp (object-content o))))
+              (let ((shared? (vivid-colors.shared:sharedp (object-content o))))
                 (if (not shared?)
                     (print-it)
                     (if (object-firstp o)

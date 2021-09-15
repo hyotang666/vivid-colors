@@ -291,7 +291,7 @@
     (vivid-colors.shared:context ()
       (vivid-colors.shared:store string)
       (vivid-colors.shared:store string)
-      (setf (vivid-colors.shared:id (vivid-colors.shared:storedp string)) 0)
+      (setf (vivid-colors.shared:id (vivid-colors.shared::storedp string)) 0)
       (compute-length (make-object :content string))))
 :equivalents (+ 3 ; #n=
 		(length (prin1-to-string "dummy")))
@@ -301,7 +301,7 @@
 	(*print-circle* t))
     (vivid-colors.shared:context ()
       (vivid-colors.shared:store string)
-      (setf (vivid-colors.shared:id (vivid-colors.shared:storedp string)) 0)
+      (setf (vivid-colors.shared:id (vivid-colors.shared::storedp string)) 0)
       (compute-length (make-object :content string))))
 :equivalents (length (prin1-to-string "dummy"))
 
@@ -310,7 +310,7 @@
 	(*print-circle* t))
     (vivid-colors.shared:context ()
       (vivid-colors.shared:store string)
-      (setf (vivid-colors.shared:id (vivid-colors.shared:storedp string)) 0)
+      (setf (vivid-colors.shared:id (vivid-colors.shared::storedp string)) 0)
       (compute-length (make-object :content string :firstp nil))))
 :equivalents (length (prin1-to-string "dummy"))
 
@@ -320,7 +320,7 @@
     (vivid-colors.shared:context ()
       (vivid-colors.shared:store string)
       (vivid-colors.shared:store string)
-      (setf (vivid-colors.shared:id (vivid-colors.shared:storedp string)) 0)
+      (setf (vivid-colors.shared:id (vivid-colors.shared::storedp string)) 0)
       (compute-length (make-object :content string :firstp nil))))
 :equivalents (length "#0#")
 
@@ -330,7 +330,7 @@
     (vivid-colors.shared:context ()
       (vivid-colors.shared:store string)
       (vivid-colors.shared:store string)
-      (setf (vivid-colors.shared:id (vivid-colors.shared:storedp string)) 0)
+      (setf (vivid-colors.shared:id (vivid-colors.shared::storedp string)) 0)
       (compute-length (make-object :content string))))
 :equivalents (length (prin1-to-string "dummy"))
 
@@ -339,7 +339,7 @@
 	(*print-circle* nil))
     (vivid-colors.shared:context ()
       (vivid-colors.shared:store string)
-      (setf (vivid-colors.shared:id (vivid-colors.shared:storedp string)) 0)
+      (setf (vivid-colors.shared:id (vivid-colors.shared::storedp string)) 0)
       (compute-length (make-object :content string))))
 :equivalents (length (prin1-to-string "dummy"))
 
@@ -349,7 +349,7 @@
     (vivid-colors.shared:context ()
       (vivid-colors.shared:store string)
       (vivid-colors.shared:store string)
-      (setf (vivid-colors.shared:id (vivid-colors.shared:storedp string)) 0)
+      (setf (vivid-colors.shared:id (vivid-colors.shared::storedp string)) 0)
       (compute-length (make-object :content string :firstp nil))))
 :equivalents (length (prin1-to-string "dummy"))
 
@@ -358,7 +358,7 @@
 	(*print-circle* nil))
     (vivid-colors.shared:context ()
       (vivid-colors.shared:store string)
-      (setf (vivid-colors.shared:id (vivid-colors.shared:storedp string)) 0)
+      (setf (vivid-colors.shared:id (vivid-colors.shared::storedp string)) 0)
       (compute-length (make-object :content string :firstp nil))))
 :equivalents (length (prin1-to-string "dummy"))
 

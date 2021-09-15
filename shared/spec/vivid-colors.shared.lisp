@@ -1,5 +1,6 @@
 (defpackage :vivid-colors.shared.spec
   (:use :cl :jingoh :vivid-colors.shared)
+  (:import-from :vivid-colors.shared #:storedp)
   (:shadowing-import-from :vivid-colors.shared count))
 (in-package :vivid-colors.shared.spec)
 (setup :vivid-colors.shared)
@@ -203,7 +204,7 @@
     (context ()
       (dotimes (x 2) (store string))
       (sharedp string)))
-=> T
+:be-the vivid-colors.shared::shared
 
 #+syntax (SHAREDP exp) ; => result
 
