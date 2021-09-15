@@ -145,6 +145,21 @@
     (vprint '(#0=#:a #0#)))
 :outputs "(#1=#:A #1#)"
 
+#?(let ((*print-circle* t))
+    (vprint '("hoge" "fuga")))
+:outputs #.(concatenate 'string
+                        "("
+                        (with-output-to-string (out)
+                          (let ((cl-ansi-text:*color-mode* :8bit))
+                            (cl-ansi-text:with-color (cl-colors2:+tomato+ :stream out)
+                              (prin1 "hoge" out))))
+                        " "
+                        (with-output-to-string (out)
+                          (let ((cl-ansi-text:*color-mode* :8bit))
+                            (cl-ansi-text:with-color (cl-colors2:+tomato+ :stream out)
+                              (prin1 "fuga" out))))
+                        ")")
+
 (requirements-about *PRINT-VIVID* :doc-type variable
 		    :around (let ((*print-pretty* t))
 			      (call-body)))
