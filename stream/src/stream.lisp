@@ -13,6 +13,8 @@
 
 (in-package :vivid-colors.stream)
 
+(declaim (optimize speed))
+
 ;;;; CONDITION
 
 (define-condition out-of-scope (program-error cell-error)
@@ -80,6 +82,7 @@
        (content output
         &key color (key #'prin1-to-string)
         &aux (key (coerce key 'function)))
+  (declare (optimize (speed 1))) ; out of responds.
   (vivid-colors.content:add-content
     (vivid-colors.content:make-object :content content
                                       :firstp (vivid-colors.shared:store
@@ -124,7 +127,6 @@
 ;;;; FINISH-OUTPUT as actual output.
 
 (defmethod trivial-gray-streams:stream-finish-output ((s vprint-stream))
-  (setq st s)
   (vivid-colors.content:write-content (section s) :stream (output s)))
 
 ;;;; DSL
