@@ -16,6 +16,72 @@ Please tell me if exists.
 ```
 ![image of the command result.](img/vivid-colors.jpg)
 
+```lisp
+* (vprint '(defun vprint-structure (output structure)
+             (vprint-logical-block (output nil :prefix "#S(" :suffix ")")
+               (vprint (type-of structure) output t)
+               (write-char #\Space output)
+               (vprint-newline :linear output)
+               (loop :for (slot . rest) :on (c2mop:class-slots (class-of structure))
+                     :for name = (c2mop:slot-definition-name slot)
+                     :do (vprint (intern (symbol-name name) :keyword) output t)
+                         (write-char #\Space output)
+                         (vprint (slot-value structure name) output t)
+                         (when rest
+                           (write-char #\Space output)
+                           (vprint-newline :linear output))))))
+```
+![image of the command result.](img/sexp.jpg)
+
+## How to extend.
+Ideally, I want to use a pretty-printing system for this coloring feature but
+it does not match for this purpose because
+
+1. Pretty printer counts escape sequence length too. (Indentation will be broken.)
+2. Pretty printing system does not provide ways to customizing. (especially the way to supersede the class for pretty-printing streams.)
+
+In other words, at least I am satisfied with pretty-printing API.
+So vivid-colors APIs are designed almost the same with common lisp pretty printing APIs.
+
+For detailed examples, see [source code](src/vivid-colors.lisp).
+
+A tiny example to print the common lisp symbols as blue is bellow.
+
+```lisp
+* (defun vprint-cl-symbol (output symbol)
+    (put symbol output :color cl-colors2:+blue+))
+VPRINT-CL-SYMBOL
+
+* (handler-bind ((dispatch-key-confliction #'replace-by-new))
+    (define-vprint-dispatch blue-cl-symbols
+      (:merge :pretty :standard)
+      (:set `(member ,@(loop :for s :being :each :external-symbols :of :cl
+                             :collect s))
+            'vprint-cl-symbol)))
+BLUE-CL-SYMBOLS
+
+* (in-vprint-dispatch blue-cl-symbols)
+#<VPRINT-DISPATCH BLUE-CL-SYMBOLS entry 19>
+
+* (vprint '(defun vprint-structure (output structure)
+             (vprint-logical-block (output nil :prefix "#S(" :suffix ")")
+               (vprint (type-of structure) output t)
+               (write-char #\Space output)
+               (vprint-newline :linear output)
+               (loop :for (slot . rest) :on (c2mop:class-slots (class-of structure))
+                     :for name = (c2mop:slot-definition-name slot)
+                     :do (vprint (intern (symbol-name name) :keyword) output t)
+                         (write-char #\Space output)
+                         (vprint (slot-value structure name) output t)
+                         (when rest
+                           (write-char #\Space output)
+                           (vprint-newline :linear output))))))
+```
+![image of the command result.](img/blue-cl-symbols.jpg)
+
+### PUT vs VPRINT.
+`PUT` is used to control coloring, if you do not control coloring (using global one), use `VPRINT`.
+
 ## From developer
 
 ### Product's goal
