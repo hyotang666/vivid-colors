@@ -65,9 +65,13 @@
 
 (deftype indent-kind () '(member :block :current))
 
-(defstruct indent
-  (kind :block :type indent-kind :read-only t)
-  (width 0 :type (unsigned-byte 8) :read-only t))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  ;; ccl needs this eval-when. [1]
+  ;; LOOP macro in the method PRINT-CONTENT for SECTION use :OF-TYPE declaration.
+  ;; CCL needs the knowledge about the type CONTENT in compile time.
+  (defstruct indent
+    (kind :block :type indent-kind :read-only t)
+    (width 0 :type (unsigned-byte 8) :read-only t)))
 
 (defmethod compute-length ((i indent)) 0)
 
@@ -76,8 +80,10 @@
 
 (deftype newline-kind () '(member :mandatory :miser :fill :linear))
 
-(defstruct newline
-  (kind (error "KIND is required.") :type newline-kind :read-only t))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  ;; [1]
+  (defstruct newline
+    (kind (error "KIND is required.") :type newline-kind :read-only t)))
 
 (defmethod compute-length ((n newline)) 0)
 
@@ -94,20 +100,22 @@
     (and style (assert (cl-ansi-text::find-style-code style))))
   color)
 
-(defstruct (object (:constructor make-object
-                    (&key content color key firstp &aux
-                     (color
-                      (etypecase color
-                        (null color)
-                        (cons (validate-color-spec color)))))))
-  ;; The lisp value.
-  (content (error "CONTENT is required.") :type t :read-only t)
-  ;; Does this content in the first appearance in the expression?
-  (firstp t :type boolean :read-only t)
-  ;; Printed color.
-  (color nil :type list :read-only t)
-  ;; Representation generator. e.g. string must have #\" around.
-  (key #'prin1-to-string :type function :read-only t))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  ;; [1]
+  (defstruct (object (:constructor make-object
+                      (&key content color key firstp &aux
+                       (color
+                        (etypecase color
+                          (null color)
+                          (cons (validate-color-spec color)))))))
+    ;; The lisp value.
+    (content (error "CONTENT is required.") :type t :read-only t)
+    ;; Does this content in the first appearance in the expression?
+    (firstp t :type boolean :read-only t)
+    ;; Printed color.
+    (color nil :type list :read-only t)
+    ;; Representation generator. e.g. string must have #\" around.
+    (key #'prin1-to-string :type function :read-only t)))
 
 (defmethod compute-length ((object object))
   (flet ((object-length (content)
@@ -193,21 +201,23 @@
 
 ;;; COLORED-STRING
 
-(defstruct (colored-string (:constructor make-colored-string
-                            (&key spec &aux
-                             (spec
-                              (mapc
-                                (lambda (x)
-                                  ;; Due to the cl-ansi-text:color-specifier.
-                                  (declare (optimize (speed 1)))
-                                  (etypecase x
-                                    (string x)
-                                    (cl-ansi-text:color-specifier x)
-                                    (cons
-                                     (check-type (car x) string)
-                                     (validate-color-spec (cdr x)))))
-                                spec)))))
-  (spec nil :type list :read-only t))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  ;; [1]
+  (defstruct (colored-string (:constructor make-colored-string
+                              (&key spec &aux
+                               (spec
+                                (mapc
+                                  (lambda (x)
+                                    ;; Due to the cl-ansi-text:color-specifier.
+                                    (declare (optimize (speed 1)))
+                                    (etypecase x
+                                      (string x)
+                                      (cl-ansi-text:color-specifier x)
+                                      (cons
+                                       (check-type (car x) string)
+                                       (validate-color-spec (cdr x)))))
+                                  spec)))))
+    (spec nil :type list :read-only t)))
 
 (defmacro dospec ((var <colored-string> &optional <return>) &body body)
   `(dolist (,var (colored-string-spec ,<colored-string>) ,<return>) ,@body))
@@ -242,14 +252,16 @@
 
 ;;; SECTION
 
-(defstruct (section (:conc-name nil))
-  ;; Set by PRINCed.
-  (start 0 :type (integer 0 #.most-positive-fixnum))
-  (prefix "" :type simple-string :read-only t)
-  (contents (vivid-colors.queue:new :type 'content)
-            :type vivid-colors.queue:queue
-            :read-only t)
-  (suffix "" :type simple-string :read-only t))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  ;; [1]
+  (defstruct (section (:conc-name nil))
+    ;; Set by PRINCed.
+    (start 0 :type (integer 0 #.most-positive-fixnum))
+    (prefix "" :type simple-string :read-only t)
+    (contents (vivid-colors.queue:new :type 'content)
+              :type vivid-colors.queue:queue
+              :read-only t)
+    (suffix "" :type simple-string :read-only t)))
 
 (defun contents-list (section) (vivid-colors.queue:contents (contents section)))
 
