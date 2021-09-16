@@ -170,7 +170,9 @@
                  (object-length content))))))))
 
 (defmethod print-content ((o object) (output stream))
-  (let ((notation (funcall (object-key o) (object-content o))))
+  (let ((notation
+         (let ((*print-circle*))
+           (funcall (object-key o) (object-content o)))))
     (declare (type simple-string notation))
     (labels ((print-colored ()
                (write-string
