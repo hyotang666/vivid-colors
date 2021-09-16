@@ -34,7 +34,7 @@
 
 ;;;; PRINTERS
 
-(defun default-printer (output exp) (put exp output) (values))
+(defun default-printer (output exp) (put exp output :color *color*) (values))
 
 (setf vivid-colors.dispatch:*default-printer* 'default-printer)
 
