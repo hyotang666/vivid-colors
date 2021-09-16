@@ -12,6 +12,7 @@
            #:write-content ; Printer.
            #:newline-kind ; type.
            #:section ; type.
+           #:*color* ; configuration.
            ))
 
 (in-package :vivid-colors.content)
@@ -33,16 +34,30 @@
 
 (defparameter *print-vivid* t)
 
+(defparameter *color* nil)
+
 ;;;; UTILITIES
 
-(defmacro with-enclose ((<stream> <open> <close>) &body body)
-  (let ((s (gensym "STREAM")) (o (gensym "OPEN")) (c (gensym "CLOSE")))
-    `(let ((,s ,<stream>) (,o ,<open>) (,c ,<close>))
+(defmacro with-enclose ((<stream> <open> <close> &optional <color>) &body body)
+  (let ((s (gensym "STREAM"))
+        (o (gensym "OPEN"))
+        (c (gensym "CLOSE"))
+        (color (gensym "COLOR")))
+    `(let ((,s ,<stream>) (,o ,<open>) (,c ,<close>) (,color ,<color>))
+       (when (and *print-vivid* ,color)
+         (let ((cl-ansi-text:*color-mode* :8bit))
+           (write-string (apply #'cl-ansi-text:make-color-string ,color) ,s)))
        (write-string ,o ,s)
        (incf *position* (length ,o))
-       ,@body
+       (let ((*color* ,color))
+         ,@body)
+       (when (and *print-vivid* ,color)
+         (let ((cl-ansi-text:*color-mode* :8bit))
+           (write-string (apply #'cl-ansi-text:make-color-string ,color) ,s)))
        (write-string ,c ,s)
-       (incf *position* (length ,c)))))
+       (incf *position* (length ,c))
+       (when (and *print-vivid* ,color)
+         (write-string cl-ansi-text:+reset-color-string+ ,s)))))
 
 ;;;; GF
 
@@ -113,9 +128,9 @@
   (defstruct (object (:constructor make-object
                       (&key content color key firstp &aux
                        (color
-                        (etypecase color
-                          (null color)
-                          (cons (validate-color-spec color))))
+                         (etypecase color
+                           (null color)
+                           (cons (validate-color-spec color))))
                        #+clisp (key (progn (check-type key function) key)))))
     ;; The lisp value.
     (content (error "CONTENT is required.") :type t :read-only t)
@@ -160,7 +175,8 @@
     (labels ((print-colored ()
                (write-string
                  (let ((cl-ansi-text:*color-mode* :8bit))
-                   (apply #'cl-ansi-text:make-color-string (object-color o)))
+                   (apply #'cl-ansi-text:make-color-string
+                          (or *color* (object-color o))))
                  output)
                (print-it)
                (write-string cl-ansi-text:+reset-color-string+ output))
@@ -186,10 +202,10 @@
                                  (object-content o))))
               (if (not (object-firstp o))
                   (print-refer shared?)
-                  (if (and *print-vivid* (object-color o))
+                  (if (and *print-vivid* (or *color* (object-color o)))
                       (print-shared shared? #'print-colored)
                       (print-shared shared? #'print-it)))))
-          (if (and *print-vivid* (object-color o))
+          (if (and *print-vivid* (or *color* (object-color o)))
               (print-colored)
               (print-it))))
     (incf *position* (length notation)))
@@ -253,7 +269,7 @@
   (defstruct (section (:conc-name nil)
                       #+clisp
                       (:constructor make-section
-                       (&key start prefix contents suffix &aux
+                       (&key start prefix contents suffix color &aux
                         (start
                           (progn
                            (check-type start
@@ -266,14 +282,23 @@
                            (check-type contents vivid-colors.queue:queue)
                            contents))
                         (suffix
-                          (progn (check-type suffix simple-string) suffix)))))
+                          (progn (check-type suffix simple-string) suffix))
+                        (color
+                          (progn
+                           (check-type color
+                                       (or null
+                                           (satisfies validate-color-spec)))
+                           color)))))
     ;; Set by PRINCed.
     (start 0 :type (integer 0 #.most-positive-fixnum))
     (prefix "" :type simple-string :read-only t)
     (contents (vivid-colors.queue:new :type 'content)
               :type vivid-colors.queue:queue
               :read-only t)
-    (suffix "" :type simple-string :read-only t)))
+    (suffix "" :type simple-string :read-only t)
+    (color *color*
+           :type (or null (satisfies validate-color-spec))
+           :read-only t)))
 
 (defun contents-list (section) (vivid-colors.queue:contents (contents section)))
 
@@ -357,13 +382,13 @@
                       (<=
                         (the (mod #.array-total-size-limit) (compute-length s))
                         (the fixnum *print-right-margin*)))))
-         (with-enclose (o (prefix s) (suffix s))
+         (with-enclose (o (prefix s) (suffix s) (color s))
            (docontents (content s)
              (typecase content
                ((or character object colored-string section)
                 (print-content content o))))))
         (t
-         (with-enclose (o (prefix s) (suffix s))
+         (with-enclose (o (prefix s) (suffix s) (color s))
            (loop :for (content . rest) :of-type (content . list)
                       :on (contents-list s)
                  :do (etypecase content

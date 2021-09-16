@@ -4,7 +4,7 @@
            `((:import-from ,package ,@symbols) (:export ,@symbols))))
     `(defpackage :vivid-colors
        (:use :cl)
-       ,@(reexport-from :vivid-colors.content '(#:*print-vivid*))
+       ,@(reexport-from :vivid-colors.content '(#:*print-vivid* *color*))
        ,@(reexport-from :vivid-colors.dispatch '(#:*vprint-dispatch*
                                                   #:define-vprint-dispatch
                                                   #:in-vprint-dispatch
