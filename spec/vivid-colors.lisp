@@ -160,6 +160,9 @@
                               (prin1 "fuga" out))))
                         ")")
 
+#?(vprint #*1101)
+:outputs "#*1101"
+
 (requirements-about *PRINT-VIVID* :doc-type variable
 		    :around (let ((*print-pretty* t))
 			      (call-body)))

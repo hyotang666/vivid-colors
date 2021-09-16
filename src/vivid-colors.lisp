@@ -142,7 +142,7 @@
   (values))
 
 (defun vprint-vector (output vector)
-  (if (typep vector 'string)
+  (if (typep vector '(or bit-vector string))
       (default-printer output vector)
       (vprint-logical-block (output nil :prefix "#(" :suffix ")")
         (do ((i 0 (1+ i)))
