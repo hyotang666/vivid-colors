@@ -213,7 +213,8 @@
 #+syntax
 (newline-kind)
 
-(requirements-about COMPUTE-LENGTH :doc-type function)
+(requirements-about COMPUTE-LENGTH :doc-type function
+		    :around (let ((*print-circle* nil)) (call-body)))
 
 ;;;; Description:
 ; Evaluated to be length of THING in if printed one line.
@@ -468,7 +469,9 @@
 
 ;;;; Exceptional-Situations:
 
-(requirements-about PRINT-CONTENT :doc-type function)
+(requirements-about PRINT-CONTENT :doc-type function
+		    :around (let ((*print-circle* nil))
+			      (call-body)))
 
 ;;;; Description:
 
