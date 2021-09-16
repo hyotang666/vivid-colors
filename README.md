@@ -80,7 +80,15 @@ BLUE-CL-SYMBOLS
 ![image of the command result.](img/blue-cl-symbols.jpg)
 
 ### PUT vs VPRINT.
-`PUT` is used to control coloring, if you do not control coloring (using global one), use `VPRINT`.
+`PUT` is used to control atomic representation coloring.
+'Atomic representation' is roughly the representation that is
+not changed its representation by the variable `CL:*PRINT-PRETTY*`
+e.g. `symbol`, `character`, `number`, `pathname` or `string`.
+
+For controlling the non-atomic representation coloring,
+you need to use `VPRINT` with binding the variable `*COLOR*`.
+
+If you do not control coloring (i.e. using global one), use `VPRINT`.
 
 ## From developer
 
