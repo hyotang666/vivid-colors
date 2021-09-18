@@ -2,7 +2,7 @@
 (in-package :asdf)
 (defsystem "vivid-colors.shared"
   :version
-  "2.0.2"
+  "3.0.0"
   :depends-on
   (
    )

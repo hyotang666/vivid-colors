@@ -8,8 +8,7 @@
            #:count ; Accessor.
            #:store ; Modifier.
            #:should-do-p ; Predicate.
-           #:sharedp
-           #:*shared-counter*))
+           #:sharedp))
 
 (in-package :vivid-colors.shared)
 
@@ -51,10 +50,15 @@
   ;; How many times appear in the expression?
   (count 1 :type (integer 1 #.most-positive-fixnum)))
 
-(defun id (shared &optional errorp)
-  (or (%id shared) (and errorp (error "Uninitialized ID yet. ~S" shared))))
-
-(defun (setf id) (new shared) (setf (%id shared) new))
+(defun id (shared &key (if-does-not-exist nil))
+  (or (%id shared)
+      (ecase if-does-not-exist
+        ((nil))
+        (:error (error "ID is not initialized yet. ~S" shared))
+        (:set
+         (if *shared-counter*
+             (setf (%id shared) (incf *shared-counter*))
+             (error 'without-context :name 'context))))))
 
 (defun storedp (object)
   (if *shared-objects*

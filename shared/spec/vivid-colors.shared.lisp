@@ -1,7 +1,7 @@
 (defpackage :vivid-colors.shared.spec
   (:use :cl :jingoh :vivid-colors.shared)
   (:import-from :vivid-colors.shared #:storedp)
-  (:shadowing-import-from :vivid-colors.shared count))
+  (:shadowing-import-from :vivid-colors.shared count #:*shared-counter*))
 (in-package :vivid-colors.shared.spec)
 (setup :vivid-colors.shared)
 
@@ -54,28 +54,57 @@
 
 ;;;; Description:
 
-#+syntax (ID sb-kernel:instance &optional errorp) ; => result
+#+syntax (ID shared &key (if-does-not-exist nil)) ; => result
 
 ;;;; Arguments and Values:
 
-; instance := vivid-colors.shared::shared, otherwise implementation dependent condition.
+; shared := vivid-colors.shared::shared, otherwise implementation dependent condition.
 #?(id "not shared") :signals condition
 
-; errorp := boolean to specify signal an error when id is not initialized.
-#?(id (vivid-colors.shared::make-shared)) => nil
-#?(id (vivid-colors.shared::make-shared) t) :signals error
+; if-does-not-exist := (member nil :set :error), otherwise an error is signaled.
+#?(id (vivid-colors.shared::make-shared) :if-does-not-exist :unknown) :signals error
+; if nil and ID is not set yet, NIL is returned. (the default)
+#?(id (vivid-colors.shared::make-shared)) => NIL
+; if :error and ID is not set yet, an error is signaled.
+#?(id (vivid-colors.shared::make-shared) :if-does-not-exist :error) :signals error
+; if :set and ID is not set yet, ID is set and its value is returned.
+#?(let ((*shared-counter* 0)
+	(s (vivid-colors.shared::make-shared)))
+    (values (id s :if-does-not-exist :set)
+	    (id s)))
+:values (1 1)
 
 ; result := (integer 0 #.most-positive-fixnum)
 
 ;;;; Affected By:
-; none
+; *shared-counter*
 
 ;;;; Side-Effects:
-; none
+; Incf *shared-counter* when :if-does-not-exist :set is specified and id is not set yet.
+#?(let ((*shared-counter* 0))
+    (id (vivid-colors.shared::make-shared) :if-does-not-exist :set)
+    *shared-counter*)
+=> 1
+
+#?(let ((*shared-counter* 0))
+    (id (vivid-colors.shared::make-shared :%id 1) :if-does-not-exist :set)
+    *shared-counter*)
+=> 0
+
+; Modify SHARED objects id slot when it is not set yet and :if-does-not-exist :set is specified.
+#?(let ((*shared-counter* 0)
+	(s (vivid-colors.shared::make-shared)))
+    (values (id s)
+	    (progn (id s :if-does-not-exist :set)
+		   (id s))))
+:values (nil 1)
 
 ;;;; Notes:
 
 ;;;; Exceptional-Situations:
+; When without context and ID is not set yet and :if-does-not-exist :set is specified an error is signald.
+#?(id (vivid-colors.shared::make-shared) :if-does-not-exist :set)
+:signals program-error
 
 (requirements-about STORE :doc-type function)
 
