@@ -73,11 +73,12 @@
         (characterp exp)
         (numberp exp))))
 
-(defun sharedp (exp)
+(defun sharedp (exp &optional errorp)
   "Actually shared by two or more times?"
   (let ((shared? (storedp exp)))
-    (when (and shared? (< 1 (count shared?)))
-      shared?)))
+    (or (when (and shared? (< 1 (count shared?)))
+          shared?)
+        (and errorp (error "Not ~:[stored.~;shared.~] ~S" shared? exp)))))
 
 (defun pprint-context (output exp)
   (funcall

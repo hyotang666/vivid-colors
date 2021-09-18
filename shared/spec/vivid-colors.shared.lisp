@@ -206,11 +206,14 @@
       (sharedp string)))
 :be-the vivid-colors.shared::shared
 
-#+syntax (SHAREDP exp) ; => result
+#+syntax (SHAREDP exp &optional errorp) ; => result
 
 ;;;; Arguments and Values:
 
 ; exp := t
+
+; errorp := boolean to control signal an error when not shared.
+#?(context () (sharedp t t)) :signals error
 
 ; result := boolean.
 
