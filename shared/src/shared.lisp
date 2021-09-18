@@ -47,9 +47,14 @@
   ;; This is set when printing because we do not know actually printing it.
   ;; ID is used only the content satisfies SHOULD-DO-P and
   ;; reffered by two or more times and *print-circle* is true.
-  (id nil :type (or null (integer 0 #.most-positive-fixnum)))
+  (%id nil :type (or null (integer 0 #.most-positive-fixnum)))
   ;; How many times appear in the expression?
   (count 1 :type (integer 1 #.most-positive-fixnum)))
+
+(defun id (shared &optional errorp)
+  (or (%id shared) (and errorp (error "Uninitialized ID yet. ~S" shared))))
+
+(defun (setf id) (new shared) (setf (%id shared) new))
 
 (defun storedp (object)
   (if *shared-objects*

@@ -54,12 +54,16 @@
 
 ;;;; Description:
 
-#+syntax (ID sb-kernel:instance) ; => result
+#+syntax (ID sb-kernel:instance &optional errorp) ; => result
 
 ;;;; Arguments and Values:
 
 ; instance := vivid-colors.shared::shared, otherwise implementation dependent condition.
 #?(id "not shared") :signals condition
+
+; errorp := boolean to specify signal an error when id is not initialized.
+#?(id (vivid-colors.shared::make-shared)) => nil
+#?(id (vivid-colors.shared::make-shared) t) :signals error
 
 ; result := (integer 0 #.most-positive-fixnum)
 
