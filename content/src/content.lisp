@@ -160,8 +160,7 @@
              (check-type string? string)
              (length string?))))
     (declare
-      (ftype (function (object)
-              (values (mod #.array-total-size-limit) &optional))
+      (ftype (function (*) (values (mod #.array-total-size-limit) &optional))
              object-length))
     (let* ((content (object-content object))
            (shared? (and *print-circle* (vivid-colors.shared:sharedp content))))
