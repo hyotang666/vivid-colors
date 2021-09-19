@@ -141,33 +141,35 @@
     ;; Representation generator. e.g. string must have #\" around.
     (key #'prin1-to-string :type function :read-only t)))
 
+(declaim
+ (ftype (function (t) (values (mod #.array-total-size-limit) &optional))
+        compute-shared-length))
+
+(defun compute-shared-length (exp)
+  (let ((shared (vivid-colors.shared:sharedp exp t)))
+    (+ 2 ; ## or #=
+       (length
+         (write-to-string
+           (vivid-colors.shared:id shared :if-does-not-exist :set)
+           :base 10)))))
+
 (defmethod compute-length ((object object))
   (flet ((object-length (content)
            (let ((string? (funcall (object-key object) content)))
              (check-type string? string)
              (length string?))))
     (declare
-      (ftype (function (t) (values (mod #.array-total-size-limit) &optional))
+      (ftype (function (object)
+              (values (mod #.array-total-size-limit) &optional))
              object-length))
     (let* ((content (object-content object))
            (shared? (and *print-circle* (vivid-colors.shared:sharedp content))))
       (cond ((not shared?) (object-length content))
-            ((not (object-firstp object))
-             (+ 2 ; For ##
-                (length
-                  (write-to-string (vivid-colors.shared:id shared?)
-                                   :base 10))))
+            ((not (object-firstp object)) (compute-shared-length content))
             (t
-             ;; I do not know how to fix note below.
-             ;; note: unable to open-code float conversion in mixed numric operation
-             ;; due to type uncertainty:
-             ;; The second argument is a NUMBER, not a FLOAT.
-             (locally
-              (declare (optimize (speed 1)))
-              (+ 2 ; For #=
-                 (length
-                   (write-to-string (vivid-colors.shared:id shared?) :base 10))
-                 (object-length content))))))))
+             (the (mod #.array-total-size-limit)
+                  (+ (compute-shared-length content)
+                     (object-length content))))))))
 
 (defmethod print-content ((o object) (output stream))
   (let ((notation
