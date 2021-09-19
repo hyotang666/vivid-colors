@@ -60,6 +60,7 @@
          (write-string cl-ansi-text:+reset-color-string+ ,s)))))
 
 ;;;; GF
+;; NOTE: COMPUTE-LENGTH responds to initialize shared-id.
 
 (defgeneric compute-length (thing))
 
