@@ -45,9 +45,10 @@
 
 ;;;; Side-Effects:
 ; Modify VPRINT-STREAM state.
-#?(let ((vs (make-instance 'vivid-colors.stream::vprint-stream)))
-    (put-strings '("1" ("2" #.cl-colors2:+red+)) vs)
-    (vivid-colors.content::contents-list (vivid-colors.stream::section vs)))
+#?(vivid-colors.shared:context ()
+    (let ((vs (make-instance 'vivid-colors.stream::vprint-stream)))
+      (put-strings '("1" ("2" #.cl-colors2:+red+)) vs)
+      (vivid-colors.content::contents-list (vivid-colors.stream::section vs))))
 :satisfies (lambda (list)
              (& (equalp list
                         (list (vivid-colors.content::make-colored-string
@@ -102,8 +103,8 @@
 
 ;;;; Side-Effects:
 ; Modify VPRINT-STREAM state.
-#?(let ((vs (make-instance 'vivid-colors.stream::vprint-stream)))
-    (vivid-colors.shared:context ()
+#?(vivid-colors.shared:context ()
+    (let ((vs (make-instance 'vivid-colors.stream::vprint-stream)))
       (values (copy-list (vivid-colors.content::contents-list (vivid-colors.stream::section vs)))
 	      (put #\a vs)
 	      (vivid-colors.content::contents-list (vivid-colors.stream::section vs)))))
@@ -111,8 +112,9 @@
 (lambda (before put after)
   (& (null before)
      (eql #\a put)
-     (equalp after (list (vivid-colors.content::make-object
-                           :content #\a :firstp nil)))))
+     (equalp after (list (vivid-colors.shared:context ()
+                           (vivid-colors.content::make-object
+                             :content #\a))))))
 
 ;;;; Notes:
 ; Because above side effect, you should use PUT rather than WRITE for VPRINT-STREAM.
@@ -132,7 +134,8 @@
 ;;;; Arguments and Values:
 
 ; kind := (member :miser :fill :linear :mandatory), otherwise implementation dependent condition.
-#?(vprint-newline "not member" (make-instance 'vivid-colors.stream::vprint-stream))
+#?(vivid-colors.shared:context ()
+    (vprint-newline "not member" (make-instance 'vivid-colors.stream::vprint-stream)))
 :signals condition
 
 ; output := vprint-stream, otherwise implementation dependent condition.
@@ -145,9 +148,10 @@
 
 ;;;; Side-Effects:
 ; Modify VPRINT-STREAM state.
-#?(let ((vs (make-instance 'vivid-colors.stream::vprint-stream)))
-    (vprint-newline :linear vs)
-    (vivid-colors.content::contents-list (vivid-colors.stream::section vs)))
+#?(vivid-colors.shared:context ()
+    (let ((vs (make-instance 'vivid-colors.stream::vprint-stream)))
+      (vprint-newline :linear vs)
+      (vivid-colors.content::contents-list (vivid-colors.stream::section vs))))
 :satisfies (lambda (list)
              (& (equalp list
                         (list (vivid-colors.content::make-newline :kind :linear)))))
@@ -165,7 +169,8 @@
 ;;;; Arguments and Values:
 
 ; kind := (member :block :current), otherwise implementation dependent condition.
-#?(vprint-indent "not member" 0 (make-instance 'vivid-colors.stream::vprint-stream))
+#?(vivid-colors.shared:context ()
+    (vprint-indent "not member" 0 (make-instance 'vivid-colors.stream::vprint-stream)))
 :signals condition
 
 ; indent := (unsigned-byte 62), otherwise implementation dependent condition.
@@ -182,10 +187,11 @@
 
 ;;;; Side-Effects:
 ; Modify VPRINT-STREAM state.
-#?(let ((vs (make-instance 'vivid-colors.stream::vprint-stream)))
-    (values (vivid-colors.content::contents-list (vivid-colors.stream::section vs))
-            (progn (vprint-indent :block 3 vs)
-                   (vivid-colors.content::contents-list (vivid-colors.stream::section vs)))))
+#?(vivid-colors.shared:context ()
+    (let ((vs (make-instance 'vivid-colors.stream::vprint-stream)))
+      (values (vivid-colors.content::contents-list (vivid-colors.stream::section vs))
+              (progn (vprint-indent :block 3 vs)
+                     (vivid-colors.content::contents-list (vivid-colors.stream::section vs))))))
 :multiple-value-satisfies
 (lambda (before after)
   (& (null before)
@@ -236,12 +242,13 @@
 :values (nil t)
 
 ; If *VSTREAM* is already bound, its section is modified.
-#?(let* ((vs (make-instance 'vivid-colors.stream::vprint-stream))
-         (vivid-colors.stream::*vstream* vs)
-         (sec (vivid-colors.stream::section vivid-colors.stream::*vstream*)))
-    (vprint-logical-block (nil nil)
-      (values (eq vs vivid-colors.stream::*vstream*)
-              (eq sec (vivid-colors.stream::section vivid-colors.stream::*vstream*)))))
+#?(vivid-colors.shared:context ()
+    (let* ((vs (make-instance 'vivid-colors.stream::vprint-stream))
+           (vivid-colors.stream::*vstream* vs)
+           (sec (vivid-colors.stream::section vivid-colors.stream::*vstream*)))
+      (vprint-logical-block (nil nil)
+        (values (eq vs vivid-colors.stream::*vstream*)
+                (eq sec (vivid-colors.stream::section vivid-colors.stream::*vstream*))))))
 :values (T NIL)
 
 ;;;; Side-Effects:

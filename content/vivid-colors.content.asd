@@ -2,10 +2,11 @@
 (in-package :asdf)
 (defsystem "vivid-colors.content"
   :version
-  "4.1.3"
+  "5.0.0"
   :depends-on
   (
    "uiop"                       ; Utilities, implicitly depends on via asdf.
+   "alexandria"                 ; Utilities, implicitly depends on via (cl-ansi-text vivid-colors.queue).
    "mcase"                      ; Syntax, control flow with comprehensiveness checking.
    "cl-ansi-text"               ; Ansi color escape sequence.
    "vivid-colors.queue"         ; Module the queue.

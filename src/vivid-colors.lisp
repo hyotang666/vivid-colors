@@ -119,21 +119,16 @@
           (write-char #\Space output)
           (vprint-newline :fill output))))
 
-(defun vprint-list (output list &optional (print-paren t) (newline-kind :fill))
+(defun vprint-reference (output ref) (put ref output))
+
+(defun vprint-list (output list &optional (newline-kind :fill))
   (cond
-    ((and (symbolp (car list)) (macro-function (car list)) print-paren)
+    ((and (symbolp (car list)) (macro-function (car list)))
      (vprint-macrocall output list))
-    ((and (symbolp (car list)) (fboundp (car list)) print-paren)
+    ((and (symbolp (car list)) (fboundp (car list)))
      (vprint-funcall output list))
     (t
-     (vprint-logical-block (output (the list list) :prefix
-                            (if print-paren
-                                "("
-                                "")
-                            :suffix
-                            (if print-paren
-                                ")"
-                                ""))
+     (vprint-logical-block (output (the list list) :prefix "(" :suffix ")")
        (vprint-exit-if-list-exhausted)
        (loop (vprint (vprint-pop) output t)
              (vprint-exit-if-list-exhausted)
@@ -184,19 +179,19 @@
   (if (cddr quote)
       (vprint-list output quote)
       (vprint-logical-block (output nil :prefix "'")
-        (vprint-list output (cdr quote) nil)))
+        (vprint (cadr quote) output)))
   (values))
 
 (defun vprint-function (output function)
   (if (cddr function)
       (vprint-list output function)
       (vprint-logical-block (output nil :prefix "#'")
-        (vprint-list output (cdr function) nil)))
+        (vprint (cadr function) output)))
   (values))
 
 (defun vprint-backquote (output backquote)
   (vprint-logical-block (output nil :prefix "`")
-    (vprint-list output (cdr backquote) nil))
+    (vprint (cadr backquote) output))
   (values))
 
 #+sbcl
@@ -221,6 +216,7 @@
               :do (vprint bind output t)
                   (vprint-exit-if-list-exhausted)
                   (write-char #\Space output)
+                  (vprint-newline :linear output)
             :else
               :do (vprint-logical-block (output (the list bind) :prefix "("
                                          :suffix ")")
@@ -228,13 +224,14 @@
                     (vprint (vprint-pop) output t) ; var
                     (vprint-exit-if-list-exhausted)
                     (write-char #\Space output)
-                    (vprint-newline :linear output)
+                    (vprint-newline :fill output)
                     (loop (vprint (vprint-pop) output t) ; form
                           (vprint-exit-if-list-exhausted)
                           (write-char #\Space output)
                           (vprint-newline :linear output)))
                   (vprint-exit-if-list-exhausted)
-                  (write-char #\Space output)))
+                  (write-char #\Space output)
+                  (vprint-newline :linear output)))
     ;; Body
     (vprint-exit-if-list-exhausted)
     (write-char #\Space output)
@@ -306,6 +303,7 @@
   (:set 'vector 'vprint-vector)
   (:set 'array 'vprint-array)
   (:set 'structure-object 'vprint-structure)
+  (:set 'vivid-colors.content:reference 'vprint-reference)
   (:set '(cons (member quote)) 'vprint-quote)
   (:set '(cons (member function)) 'vprint-function)
   (:set '(cons (member #.(or #+sbcl 'sb-int:quasiquote))) 'vprint-backquote)

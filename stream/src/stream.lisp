@@ -84,11 +84,11 @@
         &aux (key (coerce key 'function)))
   (declare (optimize (speed 1))) ; out of responds.
   (vivid-colors.content:add-content
-    (vivid-colors.content:make-object :content content
-                                      :firstp (vivid-colors.shared:store
-                                                content)
-                                      :color (uiop:ensure-list color)
-                                      :key key)
+    (if (typep content 'vivid-colors.content:reference)
+        content
+        (vivid-colors.content:make-object :content content
+                                          :color (uiop:ensure-list color)
+                                          :key key))
     (section output))
   content)
 
@@ -139,23 +139,42 @@
                     (vprint ,?list ,?stream t)
                     ,(<body>)))
              (<body> ()
-               `(macrolet ((vprint-pop ()
-                             `(if (consp ,',?list)
-                                  (prog1 (car ,',?list)
-                                    (setf ,',?list
+               (let ((rest (gensym "REST")) (car (gensym "CAR")))
+                 `(let ((,rest))
+                    (declare (ignorable ,rest))
+                    (macrolet ((vprint-pop ()
+                                 `(if (consp ,',?list)
+                                      (let ((,',car (car ,',?list)))
+                                        (setf ,',?list
+                                                (setf ,',rest (cdr ,',?list)))
+                                        (if (gethash ,',car *seen*)
                                             (progn
-                                             (vivid-colors.shared:store
-                                               (cdr ,',?list))
-                                             (cdr ,',?list))))
-                                  (prog1 ,',?list
-                                    (write-char #\. ,',?stream)
-                                    (write-char #\Space ,',?stream)
-                                    (setf ,',?list nil))))
-                           (vprint-exit-if-list-exhausted ()
-                             `(unless ,',?list
-                                (return-from ,',?block (values)))))
-                  (vivid-colors.shared:store ,?list)
-                  ,@body)))
+                                             (vivid-colors.shared:store ,',car)
+                                             (gethash ,',car *seen*))
+                                            ,',car))
+                                      (prog1 ,',?list
+                                        (write-char #\. ,',?stream)
+                                        (write-char #\Space ,',?stream)
+                                        (setf ,',?list nil))))
+                               (vprint-exit-if-list-exhausted ()
+                                 `(progn
+                                   (vivid-colors.shared:store ,',rest)
+                                   (when (and ,',rest
+                                              (eq ,',rest
+                                                  (vivid-colors.content:expression
+                                                    (section ,',?stream))))
+                                     (unless *print-circle*
+                                       (cerror "Asign *print-circle* with T."
+                                               "Could not handle circular list.")
+                                       (setf *print-circle* t))
+                                     (vivid-colors.content:add-content
+                                       (vivid-colors.content:make-reference
+                                         :section (section ,',?stream))
+                                       (section ,',?stream))
+                                     (return-from ,',?block (values)))
+                                   (unless ,',?list
+                                     (return-from ,',?block (values))))))
+                      ,@body)))))
       (cond ((typep <list> '(cons (eql the) (cons (eql list)))) (<body>))
             ((not (constantp <list>)) (<whole>))
             ((listp (eval <list>)) (<body>))
@@ -168,7 +187,8 @@
                       (<then> `(vivid-colors.content:make-section))
                       (<else>
                        `(vivid-colors.content:make-section :prefix ,?prefix
-                                                           :suffix ,?suffix)))
+                                                           :suffix ,?suffix
+                                                           :expression ,?list)))
       (cond
         ((constantp <list>)
          (let ((value (eval <list>)))
@@ -189,7 +209,21 @@
            (if (not (listp value))
                <then>
                <else>)))
-        (t <whole>)))))
+        (t <whole>))))
+  (defun <seen-setter> (<list> l var)
+    (symbol-macrolet ((<whole>
+                       `((when (consp ,l)
+                           (setf (gethash ,l *seen*)
+                                   (vivid-colors.content:make-reference
+                                     :section (section ,var)))))))
+      (if (not (constantp <list>))
+          <whole>
+          (let ((value (eval <list>)))
+            (if (atom value)
+                nil
+                <whole>))))))
+
+(defvar *seen* nil)
 
 (defmacro vprint-logical-block
           ((<stream-var> <list> &key (prefix "") (suffix "")) &body body)
@@ -197,24 +231,28 @@
         (b (gensym "VPRINT-LOGICAL-BLOCK"))
         (l (gensym "LIST"))
         (var (<stream-var> <stream-var>)))
-    `(let* ((,l ,<list>)
-            (,s
-             (when (boundp '*vstream*)
-               (section *vstream*)))
-            (,var
-             (if (boundp '*vstream*)
-                 (progn
-                  (setf (section *vstream*)
-                          ,(<make-section> <list> l prefix suffix))
-                  *vstream*)
-                 (make-instance 'vprint-stream
-                                :output ,var
-                                :section (vivid-colors.content:make-section
-                                           :prefix ,(<xxxfix> <list> l prefix)
-                                           :suffix ,(<xxxfix> <list> l
-                                                              suffix)))))
-            (*vstream* ,var))
-       (vivid-colors.shared:context ()
+    `(vivid-colors.shared:context ()
+       (let* ((,l ,<list>)
+              (,s
+               (when (boundp '*vstream*)
+                 (section *vstream*)))
+              (,var
+               (if (boundp '*vstream*)
+                   (progn
+                    (setf (section *vstream*)
+                            ,(<make-section> <list> l prefix suffix))
+                    *vstream*)
+                   (make-instance 'vprint-stream
+                                  :output ,var
+                                  :section (vivid-colors.content:make-section
+                                             :prefix ,(<xxxfix> <list> l
+                                                                prefix)
+                                             :suffix ,(<xxxfix> <list> l
+                                                                suffix)
+                                             :expression ,l))))
+              (*vstream* ,var)
+              (*seen* (or *seen* (make-hash-table :test #'eq))))
+         ,@(<seen-setter> <list> l var)
          (block ,b
            (unwind-protect ,(<vlb-body> <list> l var b body)
              (if (not ,s)

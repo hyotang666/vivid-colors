@@ -2,7 +2,7 @@
 (in-package :asdf)
 (defsystem "vivid-colors.stream.test"
   :version
-  "0.1.2"
+  "0.1.3"
   :depends-on
   (:jingoh "vivid-colors.stream")
   :components

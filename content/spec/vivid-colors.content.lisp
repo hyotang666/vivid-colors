@@ -10,26 +10,45 @@
 ;;;; Description:
 
 #+syntax (MAKE-SECTION &key
-           ((:start #:start) 0)
-           ((:prefix #:prefix) "")
-           ((:contents #:contents) (vivid-colors.queue:new :type 'content))
-           ((:suffix #:suffix) ""))
+           (start 0)
+           (prefix "")
+           (contents (vivid-colors.queue:new :type 'content))
+           (suffix "")
+           (color *color*)
+           expression)
 ; => result
 
 ;;;; Arguments and Values:
 
 ; start := (integer 0 #.most-positive-fixnum), otherwise implementation dependent condition.
-#?(make-section :start "not integer") :signals condition
-#?(make-section :start -1) :signals condition
+#?(vivid-colors.shared:context ()
+    (make-section :start "not integer"))
+:signals condition
+#?(vivid-colors.shared:context ()
+    (make-section :start -1))
+:signals condition
 
 ; prefix := string, otherwise implementation dependent condition.
-#?(make-section :prefix :not-string) :signals condition
+#?(vivid-colors.shared:context ()
+    (make-section :prefix :not-string))
+:signals condition
 
 ; contents := vivid-colors.queue:queue, otherwise implementation dependent condition.
-#?(make-section :contents "not queue") :signals condition
+#?(vivid-colors.shared:context ()
+    (make-section :contents "not queue"))
+:signals condition
 
 ; suffix := string, otherwise implementation dependent condition.
-#?(make-section :suffix :not-string) :signals condition
+#?(vivid-colors.shared:context ()
+    (make-section :suffix :not-string))
+:signals condition
+
+; color := (or null color-spec)
+#?(vivid-colors.shared:context ()
+    (make-section :color "not color spec"))
+:signals condition
+
+; expression := t
 
 ; result := section object.
 
@@ -37,11 +56,18 @@
 ; none
 
 ;;;; Side-Effects:
-; none
+; Modify vivid-colors.shared::*shared-objects* when expression satisfies vivid-colors.shared:should-do-p.
+#?(vivid-colors.shared:context ()
+    (values (hash-table-count vivid-colors.shared::*shared-objects*)
+	    (progn (make-section :expression '(1 2 3))
+		   (hash-table-count vivid-colors.shared::*shared-objects*))))
+:values (0 1)
 
 ;;;; Notes:
 
 ;;;; Exceptional-Situations:
+; If context is not achieved, an error is signaled.
+#?(make-section) :signals program-error
 
 (requirements-about MAKE-OBJECT :doc-type function)
 
@@ -62,14 +88,26 @@
 ; effect, for details, evaluate (mapcar #'car cl-ansi-text::+term-effects+).
 ; style, for details, evaluates (mapcar #'car cl-ansi-text::+text-style+).
 ; otherwise implementation-dependent-condition.
-#?(make-object :content :dummy :color '("not color")) :signals condition
-#?(make-object :content :dummy :color "not list") :signals condition
-#?(make-object :content :dummy :color (list cl-colors2:+red+ :unknown-key :dummy)) :signals condition
-#?(make-object :content :dummy :color (list cl-colors2:+red+ :effect :unknown-effect)) :signals condition
-#?(make-object :content :dummy :color (list cl-colors2:+red+ :style :unknown-style)) :signals condition
+#?(vivid-colors.shared:context ()
+    (make-object :content :dummy :color '("not color")))
+:signals condition
+#?(vivid-colors.shared:context ()
+    (make-object :content :dummy :color "not list"))
+:signals condition
+#?(vivid-colors.shared:context ()
+    (make-object :content :dummy :color (list cl-colors2:+red+ :unknown-key :dummy)))
+:signals condition
+#?(vivid-colors.shared:context ()
+    (make-object :content :dummy :color (list cl-colors2:+red+ :effect :unknown-effect)))
+:signals condition
+#?(vivid-colors.shared:context ()
+    (make-object :content :dummy :color (list cl-colors2:+red+ :style :unknown-style)))
+:signals condition
 
 ; key := function, otherwise implementation dependent condition
-#?(make-object :content :dummy :key 'prin1-to-string) :signals condition
+#?(vivid-colors.shared:context ()
+    (make-object :content :dummy :key 'prin1-to-string))
+:signals condition
 
 ; result := object
 
@@ -77,11 +115,18 @@
 ; none
 
 ;;;; Side-Effects:
-; none
+; vivid-colors.shared::*shared-objects*
+#?(vivid-colors.shared:context ()
+    (values (hash-table-count vivid-colors.shared::*shared-objects*)
+	    (progn (make-object :content "dummy")
+		   (hash-table-count vivid-colors.shared::*shared-objects*))))
+:values (0 1)
 
 ;;;; Notes:
 
 ;;;; Exceptional-Situations:
+; When context is not achieved, an error is signaled.
+#?(make-object :content t) :signals program-error
 
 (requirements-about MAKE-COLORED-STRING :doc-type function)
 
@@ -180,7 +225,7 @@
 ;;;; Arguments and Values:
 
 ; object := content, otherwise implementation dependent condition.
-#?(add-content "not content" (make-section)) :signals condition
+#?(vivid-colors.shared:context () (add-content "not content" (make-section))) :signals condition
 
 ; section := section, otherwise implementation dependent condition.
 #?(add-content #\space "not section") :signals condition
@@ -192,10 +237,11 @@
 
 ;;;; Side-Effects:
 ; Modify SECTION.
-#?(let ((section (make-section)))
-    (values (vivid-colors.content::contents-list section)
-	    (add-content #\space section)
-	    (vivid-colors.content::contents-list section)))
+#?(vivid-colors.shared:context ()
+    (let ((section (make-section)))
+      (values (vivid-colors.content::contents-list section)
+              (add-content #\space section)
+              (vivid-colors.content::contents-list section))))
 :multiple-value-satisfies
 (lambda (first second third)
   (& (null first)
@@ -269,31 +315,37 @@
 #?(compute-length (make-newline :kind :linear)) => 0
 
 ; Case object without color.
-#?(compute-length (make-object :content t)) => 1
+#?(vivid-colors.shared:context ()
+    (compute-length (make-object :content t)))
+=> 1
 
 ; Case object with color.
 ; Color escape sequence length must be ignored even if *print-vivid* is true.
 #?(let ((*print-vivid* t))
-    (compute-length (make-object :content t :color (list cl-colors2:+red+))))
+    (vivid-colors.shared:context ()
+      (compute-length (make-object :content t :color (list cl-colors2:+red+)))))
 => 1
 
 ; Case object with key function.
-#?(compute-length (make-object :content t :key (lambda (x) (format nil ":~A" x)))) => 2
+#?(vivid-colors.shared:context ()
+    (compute-length (make-object :content t :key (lambda (x) (format nil ":~A" x)))))
+=> 2
 
 ; Corner case: Is delimiter included?
-#?(compute-length (make-object :content "")) => 2
+#?(vivid-colors.shared:context ()
+    (compute-length (make-object :content "")))
+=> 2
 
 ; Case if object is shared and *print-circle* is true and appear first, #n= should be printed before contents notation.
 ; | *print-circle* | object-firstp | sharedp |
 ; | -------------- | ------------- | ------- |
 ; | t              | t             | t       |
-#?(let ((string "dummy")
-	(*print-circle* t))
-    (vivid-colors.shared:context ()
-      (vivid-colors.shared:store string)
-      (vivid-colors.shared:store string)
-      (setf (vivid-colors.shared:id (vivid-colors.shared::storedp string)) 0)
-      (compute-length (make-object :content string))))
+#?(vivid-colors.shared:context ()
+    (let* ((string "dummy")
+	   (*print-circle* t)
+	   (first (make-object :content string)))
+      (make-object :content string)
+      (compute-length first)))
 :equivalents (+ 3 ; #n=
 		(length (prin1-to-string "dummy")))
 
@@ -301,46 +353,36 @@
 #?(let ((string "dummy")
 	(*print-circle* t))
     (vivid-colors.shared:context ()
-      (vivid-colors.shared:store string)
-      (setf (vivid-colors.shared:id (vivid-colors.shared::storedp string)) 0)
       (compute-length (make-object :content string))))
 :equivalents (length (prin1-to-string "dummy"))
 
 ; | t             | nil            | nil     |
-#?(let ((string "dummy")
-	(*print-circle* t))
+#?(let ((*print-circle* t))
     (vivid-colors.shared:context ()
-      (vivid-colors.shared:store string)
-      (setf (vivid-colors.shared:id (vivid-colors.shared::storedp string)) 0)
-      (compute-length (make-object :content string :firstp nil))))
-:equivalents (length (prin1-to-string "dummy"))
+      (compute-length (make-object :content 'string))))
+:equivalents (length (prin1-to-string 'string))
 
 ; | t             | nil            | t       |
 #?(let ((string "dummy")
 	(*print-circle* t))
     (vivid-colors.shared:context ()
-      (vivid-colors.shared:store string)
-      (vivid-colors.shared:store string)
-      (setf (vivid-colors.shared:id (vivid-colors.shared::storedp string)) 0)
-      (compute-length (make-object :content string :firstp nil))))
+      (make-object :content string)
+      (compute-length (make-object :content string))))
 :equivalents (length "#0#")
 
 ; | nil           | t              | t       |
-#?(let ((string "dummy")
-	(*print-circle* nil))
-    (vivid-colors.shared:context ()
-      (vivid-colors.shared:store string)
-      (vivid-colors.shared:store string)
-      (setf (vivid-colors.shared:id (vivid-colors.shared::storedp string)) 0)
-      (compute-length (make-object :content string))))
+#?(vivid-colors.shared:context ()
+    (let* ((string "dummy")
+	   (*print-circle* nil)
+	   (first (make-object :content string)))
+      (make-object :content string)
+      (compute-length first)))
 :equivalents (length (prin1-to-string "dummy"))
 
 ; | nil           | t              | nil     |
 #?(let ((string "dummy")
 	(*print-circle* nil))
     (vivid-colors.shared:context ()
-      (vivid-colors.shared:store string)
-      (setf (vivid-colors.shared:id (vivid-colors.shared::storedp string)) 0)
       (compute-length (make-object :content string))))
 :equivalents (length (prin1-to-string "dummy"))
 
@@ -348,20 +390,15 @@
 #?(let ((string "dummy")
 	(*print-circle* nil))
     (vivid-colors.shared:context ()
-      (vivid-colors.shared:store string)
-      (vivid-colors.shared:store string)
-      (setf (vivid-colors.shared:id (vivid-colors.shared::storedp string)) 0)
-      (compute-length (make-object :content string :firstp nil))))
+      (make-object :content string)
+      (compute-length (make-object :content string))))
 :equivalents (length (prin1-to-string "dummy"))
 
 ; | nil           | nil            | nil     |
-#?(let ((string "dummy")
-	(*print-circle* nil))
+#?(let ((*print-circle* nil))
     (vivid-colors.shared:context ()
-      (vivid-colors.shared:store string)
-      (setf (vivid-colors.shared:id (vivid-colors.shared::storedp string)) 0)
-      (compute-length (make-object :content string :firstp nil))))
-:equivalents (length (prin1-to-string "dummy"))
+      (compute-length (make-object :content 'string))))
+:equivalents (length (prin1-to-string 'string))
 
 ; Case colored-string.
 ; Color escape sequence length must be ignored even if *print-vivid* is true.
@@ -371,32 +408,77 @@
 
 ; Case section.
 ; When empty section.
-#?(compute-length (make-section)) => 0
+#?(vivid-colors.shared:context () (compute-length (make-section))) => 0
 
 ; With prefix.
-#?(compute-length (make-section :prefix "(")) => 1
+#?(vivid-colors.shared:context () (compute-length (make-section :prefix "("))) => 1
 
 ; With suffix.
-#?(compute-length (make-section :suffix ")")) => 1
+#?(vivid-colors.shared:context () (compute-length (make-section :suffix ")"))) => 1
 
 ; With contents character.
-#?(let ((s (make-section)))
-    (add-content #\a s)
-    (compute-length s))
+#?(vivid-colors.shared:context ()
+    (let ((s (make-section)))
+      (add-content #\a s)
+      (compute-length s)))
 => 1
 
 ; With contents some characters.
-#?(let ((s (make-section)))
-    (add-content #\a s)
-    (add-content #\a s)
-    (compute-length s))
+#?(vivid-colors.shared:context ()
+    (let ((s (make-section)))
+      (add-content #\a s)
+      (add-content #\a s)
+      (compute-length s)))
 => 2
 
 ; With nested section.
-#?(let ((s (make-section :prefix "(" :suffix ")")))
-    (add-content (make-section :prefix "#(" :suffix ")")  s)
-    (compute-length s))
+#?(vivid-colors.shared:context ()
+    (let ((s (make-section :prefix "(" :suffix ")")))
+      (add-content (make-section :prefix "#(" :suffix ")")  s)
+      (compute-length s)))
 => 5
+
+; Case string.
+#?(vivid-colors.shared:context ()
+    (let ((s (make-section :prefix "(" :suffix ")"))
+          (string ""))
+      (add-content (make-object :content string) s)
+      (vivid-colors.shared:context ()
+        (compute-length s))))
+:equivalents (length (prin1-to-string '("")))
+
+; Case *print-circle* t.
+#?(vivid-colors.shared:context ()
+    (let ((*print-circle* t)
+	  (s (make-section :prefix "(" :suffix ")"))
+	  (string ""))
+      (add-content (make-object :content string) s)
+      (add-content #\space s)
+      (add-content (make-object :content string) s)
+      (vivid-colors.shared:id (vivid-colors.shared::storedp string) :if-does-not-exist :set)
+      (compute-length s)))
+:equivalents (length (write-to-string '(#0="" #0#) :circle t :escape t))
+
+; Case circular list of CAR.
+#?(vivid-colors.shared:context ()
+    (let* ((*print-circle* t)
+	   (content'#0=(#0#))
+	   (s (make-section :prefix "(" :suffix ")" :expression content)))
+      (vivid-colors.shared:store (car content))
+      (add-content (make-reference :section s) s)
+      (compute-length s)))
+:equivalents (length (write-to-string '#1=(#1#) :circle t :escape t))
+
+; Case circluar list of CDR.
+#?(vivid-colors.shared:context ()
+    (let* ((*print-circle* t)
+	   (content '#0=(t . #0#))
+	   (s (make-section :prefix "(" :suffix ")" :expression content)))
+      (vivid-colors.shared:store (cdr content))
+      (add-content (make-object :content t) s)
+      (add-content (make-reference :section s) s)
+      (compute-length s)))
+:equivalents (length (write-to-string '#1=(t . #1#) :circle t :escape t))
 
 (requirements-about MANDATORY? :doc-type function)
 
@@ -411,18 +493,20 @@
 #?(mandatory? "not section") :signals condition
 
 ; result := boolean.
-#?(mandatory? (make-section)) => nil
-#?(let ((section (make-section)))
-    (add-content (make-newline :kind :mandatory) section)
-    (mandatory? section))
+#?(vivid-colors.shared:context () (mandatory? (make-section))) => nil
+#?(vivid-colors.shared:context ()
+    (let ((section (make-section)))
+      (add-content (make-newline :kind :mandatory) section)
+      (mandatory? section)))
 => T
 
 ; Case nested.
-#?(let ((outer (make-section))
-	(inner (make-section)))
-    (add-content (make-newline :kind :mandatory) inner)
-    (add-content inner outer)
-    (mandatory? outer))
+#?(vivid-colors.shared:context ()
+    (let ((outer (make-section))
+          (inner (make-section)))
+      (add-content (make-newline :kind :mandatory) inner)
+      (add-content inner outer)
+      (mandatory? outer)))
 => T
 
 ;;;; Affected By:
@@ -514,53 +598,59 @@
 :outputs "a"
 
 ; Case *print-pretty* t, and :mandatory newline.
-#?(let ((section (make-section)))
-    (add-content (make-newline :kind :mandatory) section)
-    (with-print-context (:pretty t)
-      (print-content section *standard-output*)))
+#?(vivid-colors.shared:context ()
+    (let ((section (make-section)))
+      (add-content (make-newline :kind :mandatory) section)
+      (with-print-context (:pretty t)
+        (print-content section *standard-output*))))
 :outputs "
 "
 
-#?(let ((section (make-section)))
-    (add-content (make-newline :kind :mandatory) section)
-    (with-print-context (:pretty nil) ; <--- NOTE!
-      (print-content section *standard-output*)))
+#?(vivid-colors.shared:context ()
+    (let ((section (make-section)))
+      (add-content (make-newline :kind :mandatory) section)
+      (with-print-context (:pretty nil) ; <--- NOTE!
+        (print-content section *standard-output*))))
 :outputs ""
 
 ; Case :linear newline.
 ; If line over *print-right-margin*, newline is printed.
-#?(let ((section (make-section)))
-    (add-content (make-object :content #\a) section)
-    (add-content (make-newline :kind :linear) section)
-    (add-content (make-object :content #\b) section)
-    (with-print-context (:pretty t :right-margin 1)
-      (print-content section *standard-output*)))
+#?(vivid-colors.shared:context ()
+    (let ((section (make-section)))
+      (add-content (make-object :content #\a) section)
+      (add-content (make-newline :kind :linear) section)
+      (add-content (make-object :content #\b) section)
+      (with-print-context (:pretty t :right-margin 1)
+        (print-content section *standard-output*))))
 :outputs "#\\a
 #\\b"
 
-#?(let ((section (make-section)))
-    (add-content (make-object :content #\a) section)
-    (add-content (make-newline :kind :linear) section)
-    (add-content (make-object :content #\b) section)
-    (with-print-context (:pretty nil ; <--- NOTE!
-                         :right-margin 1)
-      (print-content section *standard-output*)))
+#?(vivid-colors.shared:context ()
+    (let ((section (make-section)))
+      (add-content (make-object :content #\a) section)
+      (add-content (make-newline :kind :linear) section)
+      (add-content (make-object :content #\b) section)
+      (with-print-context (:pretty nil ; <--- NOTE!
+                           :right-margin 1)
+        (print-content section *standard-output*))))
 :outputs "#\\a#\\b"
 
-#?(let ((section (make-section)))
-    (add-content (make-object :content #\a) section)
-    (add-content (make-newline :kind :linear) section)
-    (add-content (make-object :content #\b) section)
-    (with-print-context (:pretty t :right-margin 80)
-      (print-content section *standard-output*)))
+#?(vivid-colors.shared:context ()
+    (let ((section (make-section)))
+      (add-content (make-object :content #\a) section)
+      (add-content (make-newline :kind :linear) section)
+      (add-content (make-object :content #\b) section)
+      (with-print-context (:pretty t :right-margin 80)
+        (print-content section *standard-output*))))
 :outputs "#\\a#\\b"
 
-#?(let ((section (make-section)))
-    (add-content (make-object :content #\a) section)
-    (add-content (make-newline :kind :linear) section)
-    (add-content (make-object :content #\b) section)
-    (with-print-context (:pretty t :right-margin nil)
-      (print-content section *standard-output*)))
+#?(vivid-colors.shared:context ()
+    (let ((section (make-section)))
+      (add-content (make-object :content #\a) section)
+      (add-content (make-newline :kind :linear) section)
+      (add-content (make-object :content #\b) section)
+      (with-print-context (:pretty t :right-margin nil)
+        (print-content section *standard-output*))))
 :outputs "#\\a#\\b"
 
 ; Case :miser newline.
@@ -568,39 +658,43 @@
 ; miser style is in effect in the immediately containing logical block. 
 ; Miser style is in effect for a logical block if and only if the starting position of
 ; the logical block is less than or equal to *print-miser-width* ems from the right margin. 
-#?(let ((section (make-section)))
-    (add-content (make-object :content #\a) section)
-    (add-content (make-newline :kind :miser) section)
-    (add-content (make-object :content #\b) section)
-    (with-print-context (:pretty t :right-margin 5 :miser-width 5)
-      (print-content section *standard-output*)))
+#?(vivid-colors.shared:context ()
+    (let ((section (make-section)))
+      (add-content (make-object :content #\a) section)
+      (add-content (make-newline :kind :miser) section)
+      (add-content (make-object :content #\b) section)
+      (with-print-context (:pretty t :right-margin 5 :miser-width 5)
+        (print-content section *standard-output*))))
 :outputs "#\\a
 #\\b"
 
-#?(let ((section (make-section)))
-    (add-content (make-object :content #\a) section)
-    (add-content (make-newline :kind :miser) section)
-    (add-content (make-object :content #\b) section)
-    (with-print-context (:pretty nil :right-margin 5 :miser-width 3)
-      (print-content section *standard-output*)))
+#?(vivid-colors.shared:context ()
+    (let ((section (make-section)))
+      (add-content (make-object :content #\a) section)
+      (add-content (make-newline :kind :miser) section)
+      (add-content (make-object :content #\b) section)
+      (with-print-context (:pretty nil :right-margin 5 :miser-width 3)
+        (print-content section *standard-output*))))
 :outputs "#\\a#\\b"
 
-#?(let ((section (make-section)))
-    (add-content (make-object :content #\a) section)
-    (add-content (make-newline :kind :miser) section)
-    (add-content (make-object :content #\b) section)
-    (with-print-context (:pretty t :right-margin 10 :miser-width 3)
-      (print-content section *standard-output*)))
+#?(vivid-colors.shared:context ()
+    (let ((section (make-section)))
+      (add-content (make-object :content #\a) section)
+      (add-content (make-newline :kind :miser) section)
+      (add-content (make-object :content #\b) section)
+      (with-print-context (:pretty t :right-margin 10 :miser-width 3)
+        (print-content section *standard-output*))))
 :outputs "#\\a#\\b"
 
 ; Case :fill newline.
 ; (a) the following section cannot be printed on the end of the current line
-#?(let ((section (make-section)))
-    (add-content (make-object :content #\a) section)
-    (add-content (make-newline :kind :fill) section)
-    (add-content (make-object :content #\b) section)
-    (with-print-context (:pretty t :right-margin 5)
-      (print-content section *standard-output*)))
+#?(vivid-colors.shared:context ()
+    (let ((section (make-section)))
+      (add-content (make-object :content #\a) section)
+      (add-content (make-newline :kind :fill) section)
+      (add-content (make-object :content #\b) section)
+      (with-print-context (:pretty t :right-margin 5)
+        (print-content section *standard-output*))))
 :outputs "#\\a
 #\\b"
 
@@ -609,32 +703,35 @@
 ; miser style is in effect in the immediately containing logical block.
 
 ; Case indent.
-#?(let ((section (make-section :prefix "(")))
-    (add-content (make-object :content #\a) section)
-    (add-content (make-newline :kind :mandatory) section)
-    (add-content (make-object :content #\b) section)
-    (with-print-context (:pretty t)
-      (print-content section *standard-output*)))
+#?(vivid-colors.shared:context ()
+    (let ((section (make-section :prefix "(")))
+      (add-content (make-object :content #\a) section)
+      (add-content (make-newline :kind :mandatory) section)
+      (add-content (make-object :content #\b) section)
+      (with-print-context (:pretty t)
+        (print-content section *standard-output*))))
 :outputs "(#\\a
  #\\b"
 
-#?(let ((section (make-section :prefix "(")))
-    (add-content (make-object :content #\a) section)
-    (add-content (make-indent :width 1) section)
-    (add-content (make-newline :kind :mandatory) section)
-    (add-content (make-object :content #\b) section)
-    (with-print-context (:pretty t)
-      (print-content section *standard-output*)))
+#?(vivid-colors.shared:context ()
+    (let ((section (make-section :prefix "(")))
+      (add-content (make-object :content #\a) section)
+      (add-content (make-indent :width 1) section)
+      (add-content (make-newline :kind :mandatory) section)
+      (add-content (make-object :content #\b) section)
+      (with-print-context (:pretty t)
+        (print-content section *standard-output*))))
 :outputs "(#\\a
   #\\b"
 
-#?(let ((section (make-section :prefix "(")))
-    (add-content (make-object :content #\a) section)
-    (add-content (make-indent :kind :current) section)
-    (add-content (make-newline :kind :mandatory) section)
-    (add-content (make-object :content #\b) section)
-    (with-print-context (:pretty t)
-      (print-content section *standard-output*)))
+#?(vivid-colors.shared:context ()
+    (let ((section (make-section :prefix "(")))
+      (add-content (make-object :content #\a) section)
+      (add-content (make-indent :kind :current) section)
+      (add-content (make-newline :kind :mandatory) section)
+      (add-content (make-object :content #\b) section)
+      (with-print-context (:pretty t)
+        (print-content section *standard-output*))))
 :outputs "(#\\a
     #\\b"
 

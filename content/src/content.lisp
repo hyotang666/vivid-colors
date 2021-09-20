@@ -4,6 +4,7 @@
   (:use :cl)
   (:export ;;;; Constructors.
            #:make-section
+           #:make-reference
            #:make-object
            #:make-colored-string
            #:make-indent
@@ -12,7 +13,9 @@
            #:write-content ; Printer.
            #:newline-kind ; type.
            #:section ; type.
+           #:reference ; type
            #:*color* ; configuration.
+           #:expression ; reader.
            ))
 
 (in-package :vivid-colors.content)
@@ -127,7 +130,8 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
   ;; [1]
   (defstruct (object (:constructor make-object
-                      (&key content color key firstp &aux
+                      (&key content color key &aux
+                       (firstp (vivid-colors.shared:store content))
                        (color
                          (etypecase color
                            (null color)
@@ -259,39 +263,68 @@
            (incf *position* (length string)))))))
   c)
 
+;;;; REFERENCE
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  ;; [1]
+  (defstruct reference (section (error "SECTION is required.") :type section)))
+
+(defmethod compute-length ((ref reference))
+  (if (not *print-circle*)
+      (compute-length (reference-section ref))
+      (compute-shared-length (expression (reference-section ref)))))
+
+(defmethod print-content ((ref reference) (o stream))
+  (if (not *print-circle*)
+      (print-content (reference-section ref) o)
+      (format o "#~D#"
+              (vivid-colors.shared:id
+                (vivid-colors.shared:sharedp
+                  (expression (reference-section ref)) t)
+                :if-does-not-exist :error))))
+
 ;;; SECTION
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   ;; [1]
   (defstruct (section (:conc-name nil)
-                      #+clisp
                       (:constructor make-section
-                       (&key start prefix contents suffix color &aux
+                       (&key start prefix contents suffix color expression &aux
+                        #+clisp
                         (start
                           (progn
                            (check-type start
                                        (integer 0 #.most-positive-fixnum))
                            start))
+                        #+clisp
                         (prefix
                           (progn (check-type prefix simple-string) prefix))
+                        #+clisp
                         (contents
                           (progn
                            (check-type contents vivid-colors.queue:queue)
                            contents))
+                        #+clisp
                         (suffix
                           (progn (check-type suffix simple-string) suffix))
+                        #+clisp
                         (color
                           (progn
                            (check-type color
                                        (or null
                                            (satisfies validate-color-spec)))
-                           color)))))
+                           color))
+                        (expression
+                          (progn
+                           (vivid-colors.shared:store expression)
+                           expression)))))
     ;; Set by PRINCed.
     (start 0 :type (integer 0 #.most-positive-fixnum))
     (prefix "" :type simple-string :read-only t)
     (contents (vivid-colors.queue:new :type 'content)
               :type vivid-colors.queue:queue
               :read-only t)
+    (expression nil :type t :read-only t)
     (suffix "" :type simple-string :read-only t)
     (color *color*
            :type (or null (satisfies validate-color-spec))
@@ -300,7 +333,7 @@
 (defun contents-list (section) (vivid-colors.queue:contents (contents section)))
 
 (deftype content ()
-  '(or object character indent newline section colored-string))
+  '(or object character indent newline section colored-string reference))
 
 (defmacro docontents ((var <section> &optional <return>) &body body)
   `(vivid-colors.queue:for-each (,var (contents ,<section>) ,<return>)
@@ -312,24 +345,80 @@
 (defun add-content (object section)
   (setf (vivid-colors.queue:tail (contents section)) object))
 
-(defmethod compute-length ((section section))
-  (let ((sum 0))
-    (declare (type (mod #.most-positive-fixnum) sum))
-    (incf sum (length (prefix section)))
-    (docontents (content section)
-      (incf sum (the (mod #.array-total-size-limit) (compute-length content))))
-    (incf sum (length (suffix section)))
-    sum))
-
-(defun mandatory? (section)
+(defun circular-reference-p (section)
   (labels ((rec (s)
              (docontents (content s)
                (typecase content
-                 (newline
-                  (when (eq :mandatory (newline-kind content))
-                    (return-from mandatory? t)))
+                 (reference (return t))
                  (section (rec content))))))
     (rec section)))
+
+(defun count-content (section)
+  (let ((count 0))
+    (declare (type (mod #.array-total-size-limit) count))
+    (docontents (content section count)
+      (if (typep content '(or object section reference))
+          (incf count)))))
+
+(defmethod compute-length ((section section))
+  (declare
+   (ftype (function (*) (values (mod #.array-total-size-limit) &optional))
+          compute-length))
+  (let ((sum 0))
+    (declare (type (mod #.most-positive-fixnum) sum))
+    (labels ((do-circular ()
+               (docontents ((content . rest) section)
+                 (declare (type list rest))
+                 (typecase content
+                   (reference
+                    (if (or (find-if #'contentp rest)
+                            (= 1 (count-content section)))
+                        (incf sum
+                              (compute-shared-length
+                                (expression (reference-section content))))
+                        (incf sum
+                              (+ 3 ; " . "
+                                 (compute-shared-length
+                                   (expression
+                                     (reference-section content)))))))
+                   (otherwise (incf sum (compute-length content))))))
+             (contentp (thing)
+               (typep thing '(or object section reference)))
+             (body (fun)
+               (incf sum (length (prefix section)))
+               (funcall fun)
+               (incf sum (length (suffix section)))))
+      (cond
+        ((circular-reference-p section)
+         (when (and (alexandria:circular-list-p (expression section))
+                    (not *print-circle*))
+           (cerror "Asign *print-circle* with T."
+                   "Could not handle circular list.")
+           (setf *print-circle* t))
+         (incf sum (compute-shared-length (expression section)))
+         (body #'do-circular))
+        (*print-circle* (body #'do-circular))
+        (t
+         (body
+           (lambda ()
+             (docontents (content section)
+               (incf sum (compute-length content))))))))
+    sum))
+
+(defun mandatory? (section)
+  (let ((seen (make-hash-table :test #'eq)))
+    (setf (gethash section seen) t)
+    (labels ((rec (s)
+               (docontents (content s)
+                 (typecase content
+                   (newline
+                    (when (eq :mandatory (newline-kind content))
+                      (return-from mandatory? t)))
+                   (section
+                    (unless (gethash content seen)
+                      (setf (gethash content seen) t)
+                      (rec content)))))))
+      (rec section))))
 
 (defun over-right-margin-p (contents)
   (and *print-right-margin*
@@ -348,68 +437,85 @@
          (the (mod #.array-total-size-limit) *print-miser-width*))
        (over-right-margin-p rest)))
 
+(defun indent (indent section)
+  (setf *indent*
+          (mcase:emcase indent-kind (indent-kind indent)
+            (:block
+              *indent*
+              (+ (start section) (length (prefix section))
+                 (indent-width indent)))
+            (:current *indent* (+ *position* (indent-width indent))))))
+
+(defun newline (newlinep section output)
+  (and newlinep (setf *newlinep* t))
+  (terpri output)
+  (dotimes
+      (x
+       (setf *position*
+               (if (eq :miser newlinep)
+                   (setf *indent*
+                           (+ (start section) (length (prefix section))))
+                   *indent*)))
+    (write-char #\Space output)))
+
 (defmethod print-content ((s section) (o stream))
   (setf (start s) *position*)
   (let ((*indent* (+ (start s) (length (prefix s)))))
-    (flet ((newline (newlinep)
-             (and newlinep (setf *newlinep* t))
-             (terpri o)
-             (dotimes
-                 (x
-                  (setf *position*
-                          (if (eq :miser newlinep)
-                              (setf *indent* (+ (start s) (length (prefix s))))
-                              *indent*)))
-               (write-char #\Space o)))
-           (indent (indent)
-             (setf *indent*
-                     (mcase:emcase indent-kind (indent-kind indent)
-                       (:block
-                         *indent*
-                         (+ (start s) (length (prefix s))
-                            (indent-width indent)))
-                       (:current
-                         *indent*
-                         (+ *position* (indent-width indent)))))))
-      (cond
-        ((or (not *print-pretty*)
-             (and (not *newlinep*)
-                  (not (mandatory? s))
-                  (or (not *print-right-margin*)
-                      (<=
-                        (the (mod #.array-total-size-limit) (compute-length s))
+    (when (circular-reference-p s)
+      (unless *print-circle*
+        (cerror "Asign *print-circle* with T."
+                "Could not handle circular list.")
+        (setf *print-circle* t))
+      (format o "#~D="
+              (vivid-colors.shared:id
+                (vivid-colors.shared:sharedp (expression s) t)
+                :if-does-not-exist :error)))
+    (cond
+      ((or (not *print-pretty*)
+           (and (not *newlinep*)
+                (not (mandatory? s))
+                (or (not *print-right-margin*)
+                    (<= (the (mod #.array-total-size-limit) (compute-length s))
                         (the fixnum *print-right-margin*)))))
-         (with-enclose (o (prefix s) (suffix s) (color s))
-           (docontents (content s)
-             (typecase content
-               ((or character object colored-string section)
-                (print-content content o))))))
-        (t
-         (with-enclose (o (prefix s) (suffix s) (color s))
-           (loop :for (content . rest) :of-type (content . list)
-                      :on (contents-list s)
-                 :do (etypecase content
-                       (object (print-content content o))
-                       (section (print-content content o))
-                       (character (print-content content o))
-                       (colored-string (print-content content o))
-                       (newline
-                        (let ((kind (newline-kind content)))
-                          (mcase:emcase newline-kind kind
-                            ((:mandatory :linear) (newline :linear))
-                            (:miser
-                              (when (miserp rest s)
-                                (newline :miser)))
-                            (:fill
-                              (when (let ((next
-                                           (find-if
-                                             (lambda (x)
-                                               (typep x '(or object section)))
-                                             rest)))
-                                      (and next
-                                           (over-right-margin-p (list next))))
-                                (newline nil))))))
-                       (indent (indent content))))))))))
+       (with-enclose (o (prefix s) (suffix s) (color s))
+         (docontents ((content . rest) s)
+           (declare (type list rest))
+           (typecase content
+             ((or character object colored-string section)
+              (print-content content o))
+             (reference
+              (unless (or (find-if
+                            (lambda (x)
+                              (typep x '(or object section reference)))
+                            rest)
+                          (= 1 (count-content s)))
+                (write-string " . " o))
+              (print-content content o))))))
+      (t
+       (with-enclose (o (prefix s) (suffix s) (color s))
+         (docontents ((content . rest) s)
+           (declare (type list rest))
+           (etypecase content
+             (object (print-content content o))
+             (section (print-content content o))
+             (character (print-content content o))
+             (colored-string (print-content content o))
+             (reference (print-content content o))
+             (newline
+              (let ((kind (newline-kind content)))
+                (mcase:emcase newline-kind kind
+                  ((:mandatory :linear) (newline :linear s o))
+                  (:miser
+                    (when (miserp rest s)
+                      (newline :miser s o)))
+                  (:fill
+                    (when (let ((next
+                                 (find-if
+                                   (lambda (x) (typep x '(or object section)))
+                                   rest)))
+                            (and next (over-right-margin-p (list next))))
+                      (newline nil s o))))))
+             (indent (indent content s)))))))))
 
 ;;;; WRITE-CONTENT
 ;;; Interface for end user.
