@@ -2,21 +2,23 @@
 
 (defpackage :vivid-colors.content
   (:use :cl)
-  (:export ;;;; Constructors.
+  (:export ;;;; Constructors (i.e. appointments objects.)
            #:make-section
            #:make-reference
            #:make-object
            #:make-colored-string
            #:make-indent
            #:make-newline)
-  (:export #:add-content ; modifier.
-           #:write-content ; Printer.
-           #:newline-kind ; type.
-           #:section ; type.
-           #:reference ; type
+  (:export ;;;; Types.
+           #:newline-kind
+           #:section
+           #:reference)
+  (:export #:add-content ; modifier. (i.e. printing appointments)
+           #:write-content ; Printer (i.e. fulfills)
            #:*color* ; configuration.
            #:expression ; reader.
-           ))
+           )
+  (:documentation "Provide the feature of the printing appointments and its fulfills."))
 
 (in-package :vivid-colors.content)
 
@@ -66,10 +68,29 @@
          (when (and *print-vivid* ,color)
            (write-string cl-ansi-text:+reset-color-string+ ,s))))))
 
+(defun validate-color-spec (color)
+  (destructuring-bind
+      (color &key effect style)
+      color
+    (locally ; Out of responds.
+     (declare (optimize (speed 1)))
+     (check-type color cl-ansi-text:color-specifier))
+    (and effect (assert (cl-ansi-text::find-effect-code effect)))
+    (and style (assert (cl-ansi-text::find-style-code style))))
+  color)
+
 ;;;; GF
 ;; NOTE: COMPUTE-LENGTH responds to initialize shared-id.
 
 (defgeneric compute-length (thing))
+
+(defun compute-shared-length (exp)
+  (let ((shared (vivid-colors.shared:sharedp exp t)))
+    (+ 2 ; ## or #=
+       (length
+         (write-to-string
+           (vivid-colors.shared:id shared :if-does-not-exist :set)
+           :base 10)))))
 
 ;; We do not want to overwrite PRINT-OBJECT for builtin type (i.e. character).
 
@@ -98,6 +119,7 @@
                        (kind (progn (check-type kind indent-kind) kind))
                        (width
                         (progn (check-type width (unsigned-byte 8)) width)))))
+    "An appointment of the indentation."
     (kind :block :type indent-kind :read-only t)
     (width 0 :type (unsigned-byte 8) :read-only t)))
 
@@ -114,22 +136,12 @@
                       (:constructor make-newline
                        (&key kind &aux
                         (kind (progn (check-type kind newline-kind) kind)))))
+    "An appointment of the pretty newline."
     (kind (error "KIND is required.") :type newline-kind :read-only t)))
 
 (defmethod compute-length ((n newline)) 0)
 
 ;;; OBJECT
-
-(defun validate-color-spec (color)
-  (destructuring-bind
-      (color &key effect style)
-      color
-    (locally ; Out of responds.
-     (declare (optimize (speed 1)))
-     (check-type color cl-ansi-text:color-specifier))
-    (and effect (assert (cl-ansi-text::find-effect-code effect)))
-    (and style (assert (cl-ansi-text::find-style-code style))))
-  color)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   ;; [1]
@@ -141,6 +153,7 @@
                            (null color)
                            (cons (validate-color-spec color))))
                        #+clisp (key (progn (check-type key function) key)))))
+    "An appointment of printing the lisp object."
     ;; The lisp value.
     (content (error "CONTENT is required.") :type t :read-only t)
     ;; Does this content in the first appearance in the expression?
@@ -153,14 +166,6 @@
 (declaim
  (ftype (function (t) (values (mod #.array-total-size-limit) &optional))
         compute-shared-length))
-
-(defun compute-shared-length (exp)
-  (let ((shared (vivid-colors.shared:sharedp exp t)))
-    (+ 2 ; ## or #=
-       (length
-         (write-to-string
-           (vivid-colors.shared:id shared :if-does-not-exist :set)
-           :base 10)))))
 
 (defmethod compute-length ((object object))
   (flet ((object-length (content)
@@ -234,7 +239,10 @@
                                        (check-type (car x) string)
                                        (validate-color-spec (cdr x)))))
                                   spec)))))
+    "An appointment of printing the partially colored string."
     (spec nil :type list :read-only t)))
+
+;; An abstraction barriar as ITERATOR.
 
 (defmacro dospec ((var <colored-string> &optional <return>) &body body)
   `(dolist (,var (colored-string-spec ,<colored-string>) ,<return>) ,@body))
@@ -271,7 +279,9 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   ;; [1]
-  (defstruct reference (section (error "SECTION is required.") :type section)))
+  (defstruct reference
+    "The substitution of the circular reference."
+    (section (error "SECTION is required.") :type section)))
 
 (defmethod compute-length ((ref reference))
   (if (not *print-circle*)
@@ -322,26 +332,31 @@
                           (progn
                            (vivid-colors.shared:store expression)
                            expression)))))
+    "An appointment of printing the section."
     ;; Set by PRINCed.
     (start 0 :type (integer 0 #.most-positive-fixnum))
     (prefix "" :type simple-string :read-only t)
+    ;; Appointments to be printed.
     (contents (vivid-colors.queue:new :type 'content)
               :type vivid-colors.queue:queue
               :read-only t)
+    ;; Actual lisp object.
     (expression nil :type t :read-only t)
     (suffix "" :type simple-string :read-only t)
     (color *color*
            :type (or null (satisfies validate-color-spec))
            :read-only t)))
 
-(defun contents-list (section) (vivid-colors.queue:contents (contents section)))
-
 (deftype content ()
   '(or object character indent newline section colored-string reference))
+
+;;; An abstraction barriar as ITERATOR.
 
 (defmacro docontents ((var <section> &optional <return>) &body body)
   `(vivid-colors.queue:for-each (,var (contents ,<section>) ,<return>)
      ,@body))
+
+;;; An abstraction barriar as UPDATOR.
 
 (declaim
  (ftype (function (content section) (values content &optional)) add-content))
