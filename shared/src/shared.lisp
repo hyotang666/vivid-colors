@@ -4,17 +4,18 @@
   (:use :cl)
   (:shadow count)
   (:export #:context ; DSL.
-           #:id ; Accessor.
-           #:count ; Accessor.
+           #:id ; Reader.
            #:store ; Modifier.
            #:should-do-p ; Predicate.
-           #:sharedp))
+           #:sharedp)
+  (:documentation "Provide handling the object sharing feature as a module for vivid-colors."))
 
 (in-package :vivid-colors.shared)
 
 (declaim (optimize speed))
 
 ;;;; CONDITION
+;;; In order to provide better error message.
 
 (define-condition without-context (cell-error program-error)
   ()
@@ -24,7 +25,6 @@
               (cell-error-name this)))))
 
 ;;;; SHARED.
-;; To support *print-circle*
 
 (declaim (type (or null (integer 0 #.most-positive-fixnum)) *shared-counter*))
 
@@ -36,10 +36,27 @@
 
 (defparameter *shared-objects* nil)
 
+;;; An abstraction barriar as CREATOR.
+
 (defmacro context (() &body body)
   `(let ((*shared-counter* (or *shared-counter* 0))
          (*shared-objects* (or *shared-objects* (make-hash-table :test #'eq))))
      ,@body))
+
+(defun pprint-context (output exp)
+  (funcall
+    (formatter
+     #.(concatenate 'string "~:<" ; pprint-logical-block.
+                    "~W~^~1I ~@_" ; operator.
+                    (concatenate 'string "~:<" ; pprint-logical-block.
+                                 "~@{~W~^ ~:_~}" "~:>~^ ~_")
+                    "~@{~W~^ ~_~}" ; the body.
+                    "~:>"))
+    output exp))
+
+(set-pprint-dispatch '(cons (member context)) 'pprint-context)
+
+;;; The objects under the table.
 
 (defstruct (shared (:predicate nil) (:conc-name nil))
   ;; Integer to identify object.
@@ -49,6 +66,8 @@
   (%id nil :type (or null (integer 0 #.most-positive-fixnum)))
   ;; How many times appear in the expression?
   (count 1 :type (integer 1 #.most-positive-fixnum)))
+
+;;; An abstraction barriar as UPDATOR, REFERER.
 
 (defun id (shared &key (if-does-not-exist nil))
   (or (%id shared)
@@ -60,10 +79,14 @@
              (setf (%id shared) (incf *shared-counter*))
              (error 'without-context :name 'context))))))
 
+;;; An abstraction barriar as REFERER.
+
 (defun storedp (object)
   (if *shared-objects*
       (values (gethash object *shared-objects*))
       (error 'without-context :name 'context)))
+
+;;; An abstraction barriar as UPDATOR.
 
 (defun store (object)
   "Evaluated to be T only if actualy stored."
@@ -82,22 +105,11 @@
         (characterp exp)
         (numberp exp))))
 
+;;; An abstraction barriar as REFERER.
+
 (defun sharedp (exp &optional errorp)
   "Actually shared by two or more times?"
   (let ((shared? (storedp exp)))
     (or (when (and shared? (< 1 (count shared?)))
           shared?)
         (and errorp (error "Not ~:[stored.~;shared.~] ~S" shared? exp)))))
-
-(defun pprint-context (output exp)
-  (funcall
-    (formatter
-     #.(concatenate 'string "~:<" ; pprint-logical-block.
-                    "~W~^~1I ~@_" ; operator.
-                    (concatenate 'string "~:<" ; pprint-logical-block.
-                                 "~@{~W~^ ~:_~}" "~:>~^ ~_")
-                    "~@{~W~^ ~_~}" ; the body.
-                    "~:>"))
-    output exp))
-
-(set-pprint-dispatch '(cons (member context)) 'pprint-context)
