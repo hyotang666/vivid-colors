@@ -462,23 +462,26 @@
 ; Case circular list of CAR.
 #?(vivid-colors.shared:context ()
     (let* ((*print-circle* t)
-	   (content'#0=(#0#))
+	   (content (let ((list (cons nil nil)))
+		      (rplaca list list)))
 	   (s (make-section :prefix "(" :suffix ")" :expression content)))
       (vivid-colors.shared:store (car content))
       (add-content (make-reference :section s) s)
       (compute-length s)))
-:equivalents (length (write-to-string '#1=(#1#) :circle t :escape t))
+:equivalents (length (write-to-string (let ((list (cons nil nil)))
+					(rplaca list list))
+				      :circle t :escape t))
 
 ; Case circluar list of CDR.
 #?(vivid-colors.shared:context ()
     (let* ((*print-circle* t)
-	   (content '#0=(t . #0#))
+	   (content (alexandria:circular-list t))
 	   (s (make-section :prefix "(" :suffix ")" :expression content)))
       (vivid-colors.shared:store (cdr content))
       (add-content (make-object :content t) s)
       (add-content (make-reference :section s) s)
       (compute-length s)))
-:equivalents (length (write-to-string '#1=(t . #1#) :circle t :escape t))
+:equivalents (length (write-to-string (alexandria:circular-list t) :circle t :escape t))
 
 (requirements-about MANDATORY? :doc-type function)
 
