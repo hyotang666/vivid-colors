@@ -275,28 +275,6 @@
            (incf *position* (length string)))))))
   c)
 
-;;;; REFERENCE
-
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  ;; [1]
-  (defstruct reference
-    "The substitution of the circular reference."
-    (section (error "SECTION is required.") :type section)))
-
-(defmethod compute-length ((ref reference))
-  (if (not *print-circle*)
-      (compute-length (reference-section ref))
-      (compute-shared-length (expression (reference-section ref)))))
-
-(defmethod print-content ((ref reference) (o stream))
-  (if (not *print-circle*)
-      (print-content (reference-section ref) o)
-      (format o "#~D#"
-              (vivid-colors.shared:id
-                (vivid-colors.shared:sharedp
-                  (expression (reference-section ref)) t)
-                :if-does-not-exist :error))))
-
 ;;; SECTION
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
@@ -347,22 +325,11 @@
            :type (or null (satisfies validate-color-spec))
            :read-only t)))
 
-(deftype content ()
-  '(or object character indent newline section colored-string reference))
-
 ;;; An abstraction barriar as ITERATOR.
 
 (defmacro docontents ((var <section> &optional <return>) &body body)
   `(vivid-colors.queue:for-each (,var (contents ,<section>) ,<return>)
      ,@body))
-
-;;; An abstraction barriar as UPDATOR.
-
-(declaim
- (ftype (function (content section) (values content &optional)) add-content))
-
-(defun add-content (object section)
-  (setf (vivid-colors.queue:tail (contents section)) object))
 
 (defun circular-reference-p (section)
   (labels ((rec (s)
@@ -535,6 +502,39 @@
                             (and next (over-right-margin-p (list next))))
                       (newline nil s o))))))
              (indent (indent content s)))))))))
+
+;;;; REFERENCE
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  ;; [1]
+  (defstruct reference
+    "The substitution of the circular reference."
+    (section (error "SECTION is required.") :type section)))
+
+(defmethod compute-length ((ref reference))
+  (if (not *print-circle*)
+      (compute-length (reference-section ref))
+      (compute-shared-length (expression (reference-section ref)))))
+
+(defmethod print-content ((ref reference) (o stream))
+  (if (not *print-circle*)
+      (print-content (reference-section ref) o)
+      (format o "#~D#"
+              (vivid-colors.shared:id
+                (vivid-colors.shared:sharedp
+                  (expression (reference-section ref)) t)
+                :if-does-not-exist :error))))
+
+(deftype content ()
+  '(or object character indent newline section colored-string reference))
+
+;;; An abstraction barriar as UPDATOR.
+
+(declaim
+ (ftype (function (content section) (values content &optional)) add-content))
+
+(defun add-content (object section)
+  (setf (vivid-colors.queue:tail (contents section)) object))
 
 ;;;; WRITE-CONTENT
 ;;; Interface for end user.
