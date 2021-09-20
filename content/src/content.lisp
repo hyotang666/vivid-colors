@@ -446,7 +446,8 @@
 
 (defmethod print-content ((s section) (o stream))
   (setf (start s) *position*)
-  (let ((*indent* (+ (start s) (length (prefix s)))))
+  (let ((*indent* (+ (start s) (length (prefix s))))
+        (length (compute-length s))) ; <--- Must do compute length first.
     (when (circular-reference-p s)
       (unless *print-circle*
         (cerror "Asign *print-circle* with T."
@@ -461,7 +462,7 @@
            (and (not *newlinep*)
                 (not (mandatory? s))
                 (or (not *print-right-margin*)
-                    (<= (the (mod #.array-total-size-limit) (compute-length s))
+                    (<= (the (mod #.array-total-size-limit) length)
                         (the fixnum *print-right-margin*)))))
        (with-enclose (o (prefix s) (suffix s) (color s))
          (docontents ((content . rest) s)
