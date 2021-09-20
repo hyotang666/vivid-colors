@@ -2,7 +2,7 @@
 (in-package :asdf)
 (defsystem "vivid-colors.queue"
   :version
-  "0.0.4"
+  "0.0.5"
   :depends-on
   (
    "millet"     ; Wrapper for implementation dependent tiny utilities.
