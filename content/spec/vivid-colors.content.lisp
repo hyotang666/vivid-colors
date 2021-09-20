@@ -239,9 +239,9 @@
 ; Modify SECTION.
 #?(vivid-colors.shared:context ()
     (let ((section (make-section)))
-      (values (vivid-colors.content::contents-list section)
+      (values (vivid-colors.queue:contents (vivid-colors.content::contents section))
               (add-content #\space section)
-              (vivid-colors.content::contents-list section))))
+              (vivid-colors.queue:contents (vivid-colors.content::contents section)))))
 :multiple-value-satisfies
 (lambda (first second third)
   (& (null first)

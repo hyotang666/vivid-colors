@@ -48,7 +48,7 @@
 #?(vivid-colors.shared:context ()
     (let ((vs (make-instance 'vivid-colors.stream::vprint-stream)))
       (put-strings '("1" ("2" #.cl-colors2:+red+)) vs)
-      (vivid-colors.content::contents-list (vivid-colors.stream::section vs))))
+      (vivid-colors.queue:contents (vivid-colors.content::contents (vivid-colors.stream::section vs)))))
 :satisfies (lambda (list)
              (& (equalp list
                         (list (vivid-colors.content::make-colored-string
@@ -105,9 +105,9 @@
 ; Modify VPRINT-STREAM state.
 #?(vivid-colors.shared:context ()
     (let ((vs (make-instance 'vivid-colors.stream::vprint-stream)))
-      (values (copy-list (vivid-colors.content::contents-list (vivid-colors.stream::section vs)))
+      (values (copy-list (vivid-colors.queue:contents (vivid-colors.content::contents (vivid-colors.stream::section vs))))
 	      (put #\a vs)
-	      (vivid-colors.content::contents-list (vivid-colors.stream::section vs)))))
+	      (vivid-colors.queue:contents (vivid-colors.content::contents (vivid-colors.stream::section vs))))))
 :multiple-value-satisfies
 (lambda (before put after)
   (& (null before)
@@ -151,7 +151,7 @@
 #?(vivid-colors.shared:context ()
     (let ((vs (make-instance 'vivid-colors.stream::vprint-stream)))
       (vprint-newline :linear vs)
-      (vivid-colors.content::contents-list (vivid-colors.stream::section vs))))
+      (vivid-colors.queue:contents (vivid-colors.content::contents (vivid-colors.stream::section vs)))))
 :satisfies (lambda (list)
              (& (equalp list
                         (list (vivid-colors.content::make-newline :kind :linear)))))
@@ -189,9 +189,9 @@
 ; Modify VPRINT-STREAM state.
 #?(vivid-colors.shared:context ()
     (let ((vs (make-instance 'vivid-colors.stream::vprint-stream)))
-      (values (vivid-colors.content::contents-list (vivid-colors.stream::section vs))
+      (values (vivid-colors.queue:contents (vivid-colors.content::contents (vivid-colors.stream::section vs)))
               (progn (vprint-indent :block 3 vs)
-                     (vivid-colors.content::contents-list (vivid-colors.stream::section vs))))))
+                     (vivid-colors.queue:contents (vivid-colors.content::contents (vivid-colors.stream::section vs)))))))
 :multiple-value-satisfies
 (lambda (before after)
   (& (null before)
