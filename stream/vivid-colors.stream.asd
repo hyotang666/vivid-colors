@@ -2,10 +2,10 @@
 (in-package :asdf)
 (defsystem "vivid-colors.stream"
   :version
-  "1.1.1"
+  "1.2.0"
   :depends-on
   (
-   "uiop"                       ; Utilities implicitly depends on via asdf.
+   "alexandria"                 ; Utilities, implicitly depends on via cl-ansi-text.
    "trivial-gray-streams"       ; Wrapper for gray-streams.
    "cl-ansi-text"               ; ANSI color escape sequence.
    "vivid-colors.content"       ; Module the content objects.

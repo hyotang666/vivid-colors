@@ -35,15 +35,6 @@
       ((eql t) '*terminal-io*)
       (otherwise designator))))
 
-(let ((non-printable-code-point
-       (uiop:list-to-hash-set
-         (concatenate 'list
-                      (loop :for i :upfrom 0 :to #.(char-code #\Space)
-                            :collect (code-char i))
-                      (string (code-char #x7F))))))
-  (defun non-printable-char-p (char)
-    (values (gethash char non-printable-code-point))))
-
 (defvar *vstream*)
 
 ;;;; VPRINT-STREAM
@@ -87,7 +78,7 @@
     (if (typep content 'vivid-colors.content:reference)
         content
         (vivid-colors.content:make-object :content content
-                                          :color (uiop:ensure-list color)
+                                          :color (alexandria:ensure-list color)
                                           :key key))
     (section output))
   content)
