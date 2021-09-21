@@ -177,17 +177,21 @@
 (defvar *default-printer*)
 
 (declaim
- (ftype (function (t &optional vprint-dispatch)
-         (values (or symbol function) boolean &optional))
-        vprint-dispatch))
+ (ftype (function (t &optional vprint-dispatch) (values list &optional))
+        vprinters))
 
 (defun vprinters (exp &optional (vprint-dispatch *vprint-dispatch*))
   ;; For debug use.
-  (uiop:while-collecting (collect)
-    (dotable ((key-type vprinter) vprint-dispatch)
+  (let* ((head (cons :head nil)) (tail head))
+    (dotable ((key-type vprinter) vprint-dispatch (cdr head))
       (declare (optimize (speed 1))) ; key-type is run time value.
       (when (typep exp key-type)
-        (collect vprinter)))))
+        (rplacd tail (setf tail (list vprinter)))))))
+
+(declaim
+ (ftype (function (t &optional vprint-dispatch)
+         (values (or symbol function) boolean &optional))
+        vprint-dispatch))
 
 (defun vprint-dispatch (exp &optional (vprint-dispatch *vprint-dispatch*))
   (let ((vprinters

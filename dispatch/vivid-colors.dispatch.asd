@@ -2,12 +2,11 @@
 (in-package :asdf)
 (defsystem "vivid-colors.dispatch"
   :version
-  "0.0.1"
+  "0.0.2"
   :depends-on
   (
    "hash-table-ext"     ; Utilities for hash-table.
    "alexandria"         ; Utilities implicitly depends on via hash-table-ext.
-   "uiop"               ; Utilities implicitly depends on via asdf.
    "millet"             ; Wrapper for implementation dependent tiny utilities.
    )
   :pathname
