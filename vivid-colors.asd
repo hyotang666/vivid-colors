@@ -2,10 +2,9 @@
 (in-package :asdf)
 (defsystem "vivid-colors"
   :version
-  "7.1.1"
+  "7.1.2"
   :depends-on
   (
-   "uiop"                       ; Utilities. Implicitly depends on via asdf.
    "lambda-fiddle"              ; Utilities for lambda list processing.
    "millet"                     ; Wrapper for implementation dependent utilities.
    "closer-mop"                 ; Wrapper for Meta Object Protocols.

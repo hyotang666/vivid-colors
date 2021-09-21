@@ -23,12 +23,10 @@
 
 ;;;; UTILITIES
 
-(let ((non-printable-code-point
-       (uiop:list-to-hash-set
-         (concatenate 'list
-                      (loop :for i :upfrom 0 :to #.(char-code #\Space)
-                            :collect (code-char i))
-                      (string (code-char #x7F))))))
+(let ((non-printable-code-point (make-hash-table)))
+  (loop :for i :upfrom 0 :to #.(char-code #\Space)
+        :do (setf (gethash (code-char i) non-printable-code-point) t)
+        :finally (setf (gethash (code-char #x7F) non-printable-code-point) t))
   (defun non-printable-char-p (char)
     (values (gethash char non-printable-code-point))))
 
