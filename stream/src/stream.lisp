@@ -163,10 +163,7 @@
                                               (eq ,',rest
                                                   (vivid-colors.content:expression
                                                     (section ,',?stream))))
-                                     (unless *print-circle*
-                                       (cerror "Asign *print-circle* with T."
-                                               "Could not handle circular list.")
-                                       (setf *print-circle* t))
+                                     (vivid-colors.content:check-circularity)
                                      (vivid-colors.content:add-content
                                        (vivid-colors.content:make-reference
                                          :section (section ,',?stream))

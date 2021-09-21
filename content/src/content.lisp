@@ -17,7 +17,7 @@
            #:write-content ; Printer (i.e. fulfills)
            #:*color* ; configuration.
            #:expression ; reader.
-           )
+           #:check-circularity)
   (:documentation "Provide the feature of the printing appointments and its fulfills."))
 
 (in-package :vivid-colors.content)
@@ -78,6 +78,12 @@
     (and effect (assert (cl-ansi-text::find-effect-code effect)))
     (and style (assert (cl-ansi-text::find-style-code style))))
   color)
+
+(defun check-circularity ()
+  (unless *print-circle*
+    (cerror "Asign *print-circle* with T."
+            "Can not handle circular list due to *print-circle* := NIL.")
+    (setf *print-circle* t)))
 
 ;;;; GF
 ;; NOTE: COMPUTE-LENGTH responds to initialize shared-id.
@@ -376,11 +382,8 @@
                (incf sum (length (suffix section)))))
       (cond
         ((circular-reference-p section)
-         (when (and (alexandria:circular-list-p (expression section))
-                    (not *print-circle*))
-           (cerror "Asign *print-circle* with T."
-                   "Could not handle circular list.")
-           (setf *print-circle* t))
+         (when (alexandria:circular-list-p (expression section))
+           (check-circularity))
          (incf sum (compute-shared-length (expression section)))
          (body #'do-circular))
         (*print-circle* (body #'do-circular))
@@ -449,10 +452,7 @@
   (let ((*indent* (+ (start s) (length (prefix s))))
         (length (compute-length s))) ; <--- Must do compute length first.
     (when (circular-reference-p s)
-      (unless *print-circle*
-        (cerror "Asign *print-circle* with T."
-                "Could not handle circular list.")
-        (setf *print-circle* t))
+      (check-circularity)
       (format o "#~D="
               (vivid-colors.shared:id
                 (vivid-colors.shared:sharedp (expression s) t)
