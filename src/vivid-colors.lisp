@@ -306,7 +306,7 @@
   (:set 'vivid-colors.content:reference 'vprint-reference)
   (:set '(cons (member quote)) 'vprint-quote)
   (:set '(cons (member function)) 'vprint-function)
-  (:set '(cons (member #.(or #+sbcl 'sb-int:quasiquote))) 'vprint-backquote)
+  (:set '(cons (member #.(or (car '`nil)))) 'vprint-backquote)
   #+sbcl
   (:set 'sb-impl::comma 'vprint-comma)
   (:set '(cons (member let let* symbol-macrolet)) 'vprint-let)
