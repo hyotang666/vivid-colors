@@ -62,10 +62,12 @@
                     (vprint-dispatch-name this)
                     (hash-table-count (vprint-dispatch-table this)))))))
 
-(defmacro dotable ((var <vprint-dispatch> &optional <return>) &body body)
-  `(hash-table-ext:doht (,var (vprint-dispatch-table ,<vprint-dispatch>)
-                         ,<return>)
-     ,@body))
+(defmacro dotable
+          (((key value) <vprint-dispatch> &optional <return>) &body body)
+  `(progn
+    (maphash (lambda (,key ,value) ,@body)
+             (vprint-dispatch-table ,<vprint-dispatch>))
+    ,<return>))
 
 ;;;; Underlying database.
 
