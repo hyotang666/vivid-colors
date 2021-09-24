@@ -337,14 +337,6 @@
   `(vivid-colors.queue:for-each (,var (contents ,<section>) ,<return>)
      ,@body))
 
-(defun circular-reference-p (section)
-  (labels ((rec (s)
-             (docontents (content s)
-               (typecase content
-                 (reference (return t))
-                 (section (rec content))))))
-    (rec section)))
-
 (defun count-content (section)
   (let ((count 0))
     (declare (type (mod #.array-total-size-limit) count))
@@ -381,7 +373,7 @@
                (funcall fun)
                (incf sum (length (suffix section)))))
       (cond
-        ((circular-reference-p section)
+        ((vivid-colors.shared:sharedp (expression section))
          (when (alexandria:circular-list-p (expression section))
            (check-circularity))
          (incf sum (compute-shared-length (expression section)))
@@ -451,7 +443,7 @@
   (setf (start s) *position*)
   (let ((*indent* (+ (start s) (length (prefix s))))
         (length (compute-length s))) ; <--- Must do compute length first.
-    (when (circular-reference-p s)
+    (when (vivid-colors.shared:sharedp (expression s))
       (check-circularity)
       (format o "#~D="
               (vivid-colors.shared:id
