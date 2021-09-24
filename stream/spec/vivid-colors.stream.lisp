@@ -51,7 +51,7 @@
       (vivid-colors.queue:contents (vivid-colors.content::contents (vivid-colors.stream::section vs)))))
 :satisfies (lambda (list)
              (& (equalp list
-                        (list (vivid-colors.content::make-colored-string
+                        (list (vivid-colors.content:colored-string
                                 :spec '("1" ("2" #.cl-colors2:+red+)))))))
 
 ;;;; Notes:
@@ -113,7 +113,7 @@
   (& (null before)
      (eql #\a put)
      (equalp after (list (vivid-colors.shared:context ()
-                           (vivid-colors.content::make-object
+                           (vivid-colors.content:object
                              :content #\a))))))
 
 ;;;; Notes:
@@ -154,7 +154,7 @@
       (vivid-colors.queue:contents (vivid-colors.content::contents (vivid-colors.stream::section vs)))))
 :satisfies (lambda (list)
              (& (equalp list
-                        (list (vivid-colors.content::make-newline :kind :linear)))))
+                        (list (vivid-colors.content:newline :kind :linear)))))
 
 ;;;; Notes:
 
@@ -196,7 +196,7 @@
 (lambda (before after)
   (& (null before)
      (equalp after
-             (list (vivid-colors.content::make-indent :width 3)))))
+             (list (vivid-colors.content:indent :width 3)))))
 
 ;;;; Notes:
 

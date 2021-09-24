@@ -2,20 +2,20 @@
 
 (defpackage :vivid-colors.content
   (:use :cl)
-  (:export ;;;; Constructors (i.e. appointments objects.)
-           #:make-section
-           #:make-reference
-           #:make-object
-           #:make-colored-string
-           #:make-indent
-           #:make-newline)
-  (:export ;;;; Types.
-           #:newline-kind
+  (:export ;;;; Main API.
+           #:appoint-to-write ; modifier.
+           #:fulfill-to-write ; Printer
+           )
+  (:export ;;;; Constructors and type name. (i.e. appointments objects.)
            #:section
-           #:reference)
-  (:export #:add-content ; modifier. (i.e. printing appointments)
-           #:write-content ; Printer (i.e. fulfills)
-           #:*color* ; configuration.
+           #:reference
+           #:object
+           #:colored-string
+           #:indent
+           #:newline)
+  (:export ;;;; Types.
+           #:newline-kind)
+  (:export #:*color* ; configuration.
            #:expression ; reader.
            #:check-circularity)
   (:documentation "Provide the feature of the printing appointments and its fulfills."))
@@ -116,18 +116,18 @@
 (deftype indent-kind () '(member :block :current))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  ;; ccl needs this eval-when. [1]
-  ;; LOOP macro in the method PRINT-CONTENT for SECTION use :OF-TYPE declaration.
-  ;; CCL needs the knowledge about the type CONTENT in compile time.
-  (defstruct (indent #+clisp
-                     (:constructor make-indent
-                      (&key kind width &aux
-                       (kind (progn (check-type kind indent-kind) kind))
-                       (width
-                        (progn (check-type width (unsigned-byte 8)) width)))))
-    "An appointment of the indentation."
-    (kind :block :type indent-kind :read-only t)
-    (width 0 :type (unsigned-byte 8) :read-only t)))
+ ;; ccl needs this eval-when. [1]
+ ;; LOOP macro in the method PRINT-CONTENT for SECTION use :OF-TYPE declaration.
+ ;; CCL needs the knowledge about the type CONTENT in compile time.
+ (defstruct (indent (:constructor indent
+                     (&key kind width &aux
+                      #+clisp (kind (progn (check-type kind indent-kind) kind))
+                      #+clisp
+                      (width
+                       (progn (check-type width (unsigned-byte 8)) width)))))
+   "An appointment of the indentation."
+   (kind :block :type indent-kind :read-only t)
+   (width 0 :type (unsigned-byte 8) :read-only t)))
 
 (defmethod compute-length ((i indent)) 0)
 
@@ -137,37 +137,37 @@
 (deftype newline-kind () '(member :mandatory :miser :fill :linear))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  ;; [1]
-  (defstruct (newline #+clisp
-                      (:constructor make-newline
-                       (&key kind &aux
-                        (kind (progn (check-type kind newline-kind) kind)))))
-    "An appointment of the pretty newline."
-    (kind (error "KIND is required.") :type newline-kind :read-only t)))
+ ;; [1]
+ (defstruct (newline (:constructor newline
+                      (&key kind &aux
+                       #+clisp
+                       (kind (progn (check-type kind newline-kind) kind)))))
+   "An appointment of the pretty newline."
+   (kind (error "KIND is required.") :type newline-kind :read-only t)))
 
 (defmethod compute-length ((n newline)) 0)
 
-;;; OBJECT
+;;; OBJECTii
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  ;; [1]
-  (defstruct (object (:constructor make-object
-                      (&key content color key &aux
-                       (firstp (vivid-colors.shared:store content))
-                       (color
-                         (etypecase color
-                           (null color)
-                           (cons (validate-color-spec color))))
-                       #+clisp (key (progn (check-type key function) key)))))
-    "An appointment of printing the lisp object."
-    ;; The lisp value.
-    (content (error "CONTENT is required.") :type t :read-only t)
-    ;; Does this content in the first appearance in the expression?
-    (firstp t :type boolean :read-only t)
-    ;; Printed color.
-    (color nil :type list :read-only t)
-    ;; Representation generator. e.g. string must have #\" around.
-    (key #'prin1-to-string :type function :read-only t)))
+ ;; [1]
+ (defstruct (object (:constructor object
+                     (&key content color key &aux
+                      (firstp (vivid-colors.shared:store content))
+                      (color
+                        (etypecase color
+                          (null color)
+                          (cons (validate-color-spec color))))
+                      #+clisp (key (progn (check-type key function) key)))))
+   "An appointment of printing the lisp object."
+   ;; The lisp value.
+   (content (error "CONTENT is required.") :type t :read-only t)
+   ;; Does this content in the first appearance in the expression?
+   (firstp t :type boolean :read-only t)
+   ;; Printed color.
+   (color nil :type list :read-only t)
+   ;; Representation generator. e.g. string must have #\" around.
+   (key #'prin1-to-string :type function :read-only t)))
 
 (declaim
  (ftype (function (t) (values (mod #.array-total-size-limit) &optional))
@@ -230,23 +230,23 @@
 ;;; COLORED-STRING
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  ;; [1]
-  (defstruct (colored-string (:constructor make-colored-string
-                              (&key spec &aux
-                               (spec
-                                (mapc
-                                  (lambda (x)
-                                    ;; Due to the cl-ansi-text:color-specifier.
-                                    (declare (optimize (speed 1)))
-                                    (etypecase x
-                                      (string x)
-                                      (cl-ansi-text:color-specifier x)
-                                      (cons
-                                       (check-type (car x) string)
-                                       (validate-color-spec (cdr x)))))
-                                  spec)))))
-    "An appointment of printing the partially colored string."
-    (spec nil :type list :read-only t)))
+ ;; [1]
+ (defstruct (colored-string (:constructor colored-string
+                             (&key spec &aux
+                              (spec
+                               (mapc
+                                 (lambda (x)
+                                   ;; Due to the cl-ansi-text:color-specifier.
+                                   (declare (optimize (speed 1)))
+                                   (etypecase x
+                                     (string x)
+                                     (cl-ansi-text:color-specifier x)
+                                     (cons
+                                      (check-type (car x) string)
+                                      (validate-color-spec (cdr x)))))
+                                 spec)))))
+   "An appointment of printing the partially colored string."
+   (spec nil :type list :read-only t)))
 
 ;; An abstraction barriar as ITERATOR.
 
@@ -284,52 +284,51 @@
 ;;; SECTION
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  ;; [1]
-  (defstruct (section (:conc-name nil)
-                      (:constructor make-section
-                       (&key start prefix contents suffix color expression &aux
-                        #+clisp
-                        (start
-                          (progn
-                           (check-type start
-                                       (integer 0 #.most-positive-fixnum))
-                           start))
-                        #+clisp
-                        (prefix
-                          (progn (check-type prefix simple-string) prefix))
-                        #+clisp
-                        (contents
-                          (progn
-                           (check-type contents vivid-colors.queue:queue)
-                           contents))
-                        #+clisp
-                        (suffix
-                          (progn (check-type suffix simple-string) suffix))
-                        #+clisp
-                        (color
-                          (progn
-                           (check-type color
-                                       (or null
-                                           (satisfies validate-color-spec)))
-                           color))
-                        (expression
-                          (progn
-                           (vivid-colors.shared:store expression)
-                           expression)))))
-    "An appointment of printing the section."
-    ;; Set by PRINCed.
-    (start 0 :type (integer 0 #.most-positive-fixnum))
-    (prefix "" :type simple-string :read-only t)
-    ;; Appointments to be printed.
-    (contents (vivid-colors.queue:new :type 'content)
-              :type vivid-colors.queue:queue
-              :read-only t)
-    ;; Actual lisp object.
-    (expression nil :type t :read-only t)
-    (suffix "" :type simple-string :read-only t)
-    (color *color*
-           :type (or null (satisfies validate-color-spec))
-           :read-only t)))
+ ;; [1]
+ (defstruct (section (:conc-name nil)
+                     (:constructor section
+                      (&key start prefix contents suffix color expression &aux
+                       #+clisp
+                       (start
+                         (progn
+                          (check-type start (integer 0 #.most-positive-fixnum))
+                          start))
+                       #+clisp
+                       (prefix
+                         (progn (check-type prefix simple-string) prefix))
+                       #+clisp
+                       (contents
+                         (progn
+                          (check-type contents vivid-colors.queue:queue)
+                          contents))
+                       #+clisp
+                       (suffix
+                         (progn (check-type suffix simple-string) suffix))
+                       #+clisp
+                       (color
+                         (progn
+                          (check-type color
+                                      (or null
+                                          (satisfies validate-color-spec)))
+                          color))
+                       (expression
+                         (progn
+                          (vivid-colors.shared:store expression)
+                          expression)))))
+   "An appointment of printing the section."
+   ;; Set by PRINCed.
+   (start 0 :type (integer 0 #.most-positive-fixnum))
+   (prefix "" :type simple-string :read-only t)
+   ;; Appointments to be printed.
+   (contents (vivid-colors.queue:new :type 'content)
+             :type vivid-colors.queue:queue
+             :read-only t)
+   ;; Actual lisp object.
+   (expression nil :type t :read-only t)
+   (suffix "" :type simple-string :read-only t)
+   (color *color*
+          :type (or null (satisfies validate-color-spec))
+          :read-only t)))
 
 ;;; An abstraction barriar as ITERATOR.
 
@@ -418,7 +417,7 @@
          (the (mod #.array-total-size-limit) *print-miser-width*))
        (over-right-margin-p rest)))
 
-(defun indent (indent section)
+(defun set-indent (indent section)
   (setf *indent*
           (mcase:emcase indent-kind (indent-kind indent)
             (:block
@@ -427,7 +426,7 @@
                  (indent-width indent)))
             (:current *indent* (+ *position* (indent-width indent))))))
 
-(defun newline (newlinep section output)
+(defun print-newline (newlinep section output)
   (and newlinep (setf *newlinep* t))
   (terpri output)
   (dotimes
@@ -483,26 +482,26 @@
              (newline
               (let ((kind (newline-kind content)))
                 (mcase:emcase newline-kind kind
-                  ((:mandatory :linear) (newline :linear s o))
+                  ((:mandatory :linear) (print-newline :linear s o))
                   (:miser
                     (when (miserp rest s)
-                      (newline :miser s o)))
+                      (print-newline :miser s o)))
                   (:fill
                     (when (let ((next
                                  (find-if
                                    (lambda (x) (typep x '(or object section)))
                                    rest)))
                             (and next (over-right-margin-p (list next))))
-                      (newline nil s o))))))
-             (indent (indent content s)))))))))
+                      (print-newline nil s o))))))
+             (indent (set-indent content s)))))))))
 
 ;;;; REFERENCE
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  ;; [1]
-  (defstruct reference
-    "The substitution of the circular reference."
-    (section (error "SECTION is required.") :type section)))
+ ;; [1]
+ (defstruct (reference (:constructor reference (&key section)))
+   "The substitution of the circular reference."
+   (section (error "SECTION is required.") :type section)))
 
 (defmethod compute-length ((ref reference))
   (if (not *print-circle*)
@@ -524,9 +523,10 @@
 ;;; An abstraction barriar as UPDATOR.
 
 (declaim
- (ftype (function (content section) (values content &optional)) add-content))
+ (ftype (function (content section) (values content &optional))
+        appoint-to-write))
 
-(defun add-content (object section)
+(defun appoint-to-write (object section)
   (setf (vivid-colors.queue:tail (contents section)) object))
 
 ;;;; WRITE-CONTENT
@@ -567,9 +567,9 @@
           (:right-margin (or null (mod #.array-total-size-limit)))
           (:miser-width (or null (mod #.array-total-size-limit))))
          (values t &optional))
-        write-content))
+        fulfill-to-write))
 
-(defun write-content
+(defun fulfill-to-write
        (content
         &key (stream *standard-output*) ((:vivid *print-vivid*) *print-vivid*)
         ((:circle *print-circle*) *print-circle*)

@@ -46,7 +46,7 @@
            :initform *standard-output*
            :documentation "Underlying actual stream.")
    (section :initarg :section
-            :initform (vivid-colors.content:make-section)
+            :initform (vivid-colors.content:section)
             :type vivid-colors.content:section
             :accessor section
             :documentation "Section block.")))
@@ -58,7 +58,7 @@
 
 (defmethod trivial-gray-streams:stream-write-char
            ((s vprint-stream) (c character))
-  (vivid-colors.content:add-content c (section s)))
+  (vivid-colors.content:appoint-to-write c (section s)))
 
 ;; Adding object.
 
@@ -74,12 +74,12 @@
         &key color (key #'prin1-to-string)
         &aux (key (coerce key 'function)))
   (declare (optimize (speed 1))) ; out of responds.
-  (vivid-colors.content:add-content
+  (vivid-colors.content:appoint-to-write
     (if (typep content 'vivid-colors.content:reference)
         content
-        (vivid-colors.content:make-object :content content
-                                          :color (alexandria:ensure-list color)
-                                          :key key))
+        (vivid-colors.content:object :content content
+                                     :color (alexandria:ensure-list color)
+                                     :key key))
     (section output))
   content)
 
@@ -87,8 +87,8 @@
  (ftype (function (list vprint-stream) (values null &optional)) put-strings))
 
 (defun put-strings (strings output)
-  (vivid-colors.content:add-content
-    (vivid-colors.content:make-colored-string :spec strings) (section output))
+  (vivid-colors.content:appoint-to-write
+    (vivid-colors.content:colored-string :spec strings) (section output))
   nil)
 
 (declaim
@@ -97,9 +97,8 @@
         vprint-indent))
 
 (defun vprint-indent (kind width output)
-  (vivid-colors.content:add-content
-    (vivid-colors.content:make-indent :kind kind :width width)
-    (section output))
+  (vivid-colors.content:appoint-to-write
+    (vivid-colors.content:indent :kind kind :width width) (section output))
   (values))
 
 (declaim
@@ -111,14 +110,14 @@
   (progn
    (check-type kind vivid-colors.content:newline-kind)
    (check-type output vprint-stream))
-  (vivid-colors.content:add-content
-    (vivid-colors.content:make-newline :kind kind) (section output))
+  (vivid-colors.content:appoint-to-write
+    (vivid-colors.content:newline :kind kind) (section output))
   (values))
 
 ;;;; FINISH-OUTPUT as actual output.
 
 (defmethod trivial-gray-streams:stream-finish-output ((s vprint-stream))
-  (vivid-colors.content:write-content (section s) :stream (output s)))
+  (vivid-colors.content:fulfill-to-write (section s) :stream (output s)))
 
 ;;;; DSL
 
@@ -155,9 +154,9 @@
                                                   (vivid-colors.content:expression
                                                     (section ,',?stream))))
                                      (vivid-colors.content:check-circularity)
-                                     (vivid-colors.content:add-content
-                                       (vivid-colors.content:make-reference
-                                         :section (section ,',?stream))
+                                     (vivid-colors.content:appoint-to-write
+                                       (vivid-colors.content:reference :section (section
+                                                                                  ,',?stream))
                                        (section ,',?stream))
                                      (return-from ,',?block (values)))
                                    (unless ,',?list
@@ -172,11 +171,12 @@
                        `(if (not (listp ,?list))
                             ,<then>
                             ,<else>))
-                      (<then> `(vivid-colors.content:make-section))
+                      (<then>
+                       `(vivid-colors.content:section :expression ,?list))
                       (<else>
-                       `(vivid-colors.content:make-section :prefix ,?prefix
-                                                           :suffix ,?suffix
-                                                           :expression ,?list)))
+                       `(vivid-colors.content:section :prefix ,?prefix
+                                                      :suffix ,?suffix
+                                                      :expression ,?list)))
       (cond
         ((constantp <list>)
          (let ((value (eval <list>)))
@@ -202,8 +202,8 @@
     (symbol-macrolet ((<whole>
                        `((when (consp ,l)
                            (setf (gethash ,l *seen*)
-                                   (vivid-colors.content:make-reference
-                                     :section (section ,var)))))))
+                                   (vivid-colors.content:reference :section (section
+                                                                              ,var)))))))
       (if (not (constantp <list>))
           <whole>
           (let ((value (eval <list>)))
@@ -232,7 +232,7 @@
                     *vstream*)
                    (make-instance 'vprint-stream
                                   :output ,var
-                                  :section (vivid-colors.content:make-section
+                                  :section (vivid-colors.content:section
                                              :prefix ,(<xxxfix> <list> l
                                                                 prefix)
                                              :suffix ,(<xxxfix> <list> l
@@ -246,7 +246,8 @@
              (if (not ,s)
                  (finish-output ,var)
                  (progn
-                  (vivid-colors.content:add-content (section *vstream*) ,s)
+                  (vivid-colors.content:appoint-to-write (section *vstream*)
+                                                         ,s)
                   (setf (section *vstream*) ,s)))))))))
 
 (defmacro vprint-pop () (error 'out-of-scope :name 'vprint-put))
