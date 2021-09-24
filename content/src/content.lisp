@@ -85,33 +85,8 @@
             "Can not handle circular list due to *print-circle* := NIL.")
     (setf *print-circle* t)))
 
-;;;; GF
-;; NOTE: COMPUTE-LENGTH responds to initialize shared-id.
-
-(defgeneric compute-length (thing))
-
-(defun compute-shared-length (exp)
-  (let ((shared (vivid-colors.shared:sharedp exp t)))
-    (+ 2 ; ## or #=
-       (length
-         (write-to-string
-           (vivid-colors.shared:id shared :if-does-not-exist :set)
-           :base 10)))))
-
-;; We do not want to overwrite PRINT-OBJECT for builtin type (i.e. character).
-
-(defgeneric print-content (content output))
-
-;;;; CHARACTER
-
-(defmethod compute-length ((c character)) 1)
-
-(defmethod print-content ((c character) (output stream))
-  (write-char c output)
-  (incf *position*)
-  c)
-
-;;;; INDENT
+;;;; STRUCTURES
+;;; INDENT
 
 (deftype indent-kind () '(member :block :current))
 
@@ -129,11 +104,7 @@
    (kind :block :type indent-kind :read-only t)
    (width 0 :type (unsigned-byte 8) :read-only t)))
 
-(defmethod compute-length ((i indent)) 0)
-
-;;;; NEWLINE
-;;;; TYPES
-
+;;; NEWLINE
 (deftype newline-kind () '(member :mandatory :miser :fill :linear))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
@@ -145,9 +116,7 @@
    "An appointment of the pretty newline."
    (kind (error "KIND is required.") :type newline-kind :read-only t)))
 
-(defmethod compute-length ((n newline)) 0)
-
-;;; OBJECTii
+;;; OBJECT
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
  ;; [1]
@@ -168,64 +137,6 @@
    (color nil :type list :read-only t)
    ;; Representation generator. e.g. string must have #\" around.
    (key #'prin1-to-string :type function :read-only t)))
-
-(declaim
- (ftype (function (t) (values (mod #.array-total-size-limit) &optional))
-        compute-shared-length))
-
-(defmethod compute-length ((object object))
-  (flet ((object-length (content)
-           (let ((string? (funcall (object-key object) content)))
-             (check-type string? string)
-             (length string?))))
-    (declare
-      (ftype (function (*) (values (mod #.array-total-size-limit) &optional))
-             object-length))
-    (let* ((content (object-content object))
-           (shared? (and *print-circle* (vivid-colors.shared:sharedp content))))
-      (cond ((not shared?) (object-length content))
-            ((not (object-firstp object)) (compute-shared-length content))
-            (t
-             (the (mod #.array-total-size-limit)
-                  (+ (compute-shared-length content)
-                     (object-length content))))))))
-
-(defmethod print-content ((o object) (output stream))
-  (let ((notation
-         (let ((*print-circle*))
-           (funcall (object-key o) (object-content o)))))
-    (declare (type simple-string notation))
-    (labels ((print-colored ()
-               (write-string
-                 (let ((cl-ansi-text:*color-mode* :8bit))
-                   (apply #'cl-ansi-text:make-color-string
-                          (or *color* (object-color o))))
-                 output)
-               (print-it)
-               (write-string cl-ansi-text:+reset-color-string+ output))
-             (print-refer (shared char)
-               (write-char #\# output)
-               (write (vivid-colors.shared:id shared :if-does-not-exist :error)
-                      :stream output
-                      :base 10)
-               (write-char char output))
-             (print-it ()
-               (write-string notation output)))
-      (or (let (shared?)
-            (when (and *print-circle*
-                       (setf shared?
-                               (vivid-colors.shared:sharedp
-                                 (object-content o))))
-              (if (not (object-firstp o))
-                  (print-refer shared? #\#)
-                  (if (and *print-vivid* (or *color* (object-color o)))
-                      (progn (print-refer shared? #\=) (print-colored))
-                      (progn (print-refer shared? #\=) (print-it))))))
-          (if (and *print-vivid* (or *color* (object-color o)))
-              (print-colored)
-              (print-it))))
-    (incf *position* (length notation)))
-  o)
 
 ;;; COLORED-STRING
 
@@ -252,34 +163,6 @@
 
 (defmacro dospec ((var <colored-string> &optional <return>) &body body)
   `(dolist (,var (colored-string-spec ,<colored-string>) ,<return>) ,@body))
-
-(defmethod compute-length ((s colored-string))
-  (let ((sum 2))
-    (declare (type (mod #.array-total-size-limit) sum))
-    (dospec (spec s sum)
-      (etypecase spec
-        (string (incf sum (length spec)))
-        ((cons string) (incf sum (length (the simple-string (car spec)))))))))
-
-(defmethod print-content ((c colored-string) (output stream))
-  (with-enclose (output "\"" "\"")
-    (dospec (spec c)
-      ;; Out of our responds. Etypecase emits many notes.
-      (declare (optimize (speed 1)))
-      (etypecase spec
-        (string (write-string spec output) (incf *position* (length spec)))
-        ((cons string (cons cl-ansi-text:color-specifier))
-         (destructuring-bind
-             (string . color)
-             spec
-           (when *print-vivid*
-             (write-string (apply #'cl-ansi-text:make-color-string color)
-                           output))
-           (write-string string output)
-           (when *print-vivid*
-             (write-string cl-ansi-text:+reset-color-string+ output))
-           (incf *position* (length string)))))))
-  c)
 
 ;;; SECTION
 
@@ -330,11 +213,71 @@
           :type (or null (satisfies validate-color-spec))
           :read-only t)))
 
-;;; An abstraction barriar as ITERATOR.
+;; An abstraction barriar as ITERATOR.
 
 (defmacro docontents ((var <section> &optional <return>) &body body)
   `(vivid-colors.queue:for-each (,var (contents ,<section>) ,<return>)
      ,@body))
+
+;;; REFERENCE
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+ ;; [1]
+ (defstruct (reference (:constructor reference (&key section)))
+   "The substitution of the circular reference."
+   (section (error "SECTION is required.") :type section)))
+
+(deftype content ()
+  '(or object character indent newline section colored-string reference))
+
+;;;; GF
+;;; COMPUTE-LENGTH
+;; NOTE: COMPUTE-LENGTH responds to initialize shared-id.
+
+(declaim
+ (ftype (function (t) (values (mod #.array-total-size-limit) &optional))
+        compute-shared-length))
+
+(defun compute-shared-length (exp)
+  (let ((shared (vivid-colors.shared:sharedp exp t)))
+    (+ 2 ; ## or #=
+       (length
+         (write-to-string
+           (vivid-colors.shared:id shared :if-does-not-exist :set)
+           :base 10)))))
+
+(defgeneric compute-length (thing))
+
+(defmethod compute-length ((c character)) 1)
+
+(defmethod compute-length ((i indent)) 0)
+
+(defmethod compute-length ((n newline)) 0)
+
+(defmethod compute-length ((object object))
+  (flet ((object-length (content)
+           (let ((string? (funcall (object-key object) content)))
+             (check-type string? string)
+             (length string?))))
+    (declare
+      (ftype (function (*) (values (mod #.array-total-size-limit) &optional))
+             object-length))
+    (let* ((content (object-content object))
+           (shared? (and *print-circle* (vivid-colors.shared:sharedp content))))
+      (cond ((not shared?) (object-length content))
+            ((not (object-firstp object)) (compute-shared-length content))
+            (t
+             (the (mod #.array-total-size-limit)
+                  (+ (compute-shared-length content)
+                     (object-length content))))))))
+
+(defmethod compute-length ((s colored-string))
+  (let ((sum 2))
+    (declare (type (mod #.array-total-size-limit) sum))
+    (dospec (spec s sum)
+      (etypecase spec
+        (string (incf sum (length spec)))
+        ((cons string) (incf sum (length (the simple-string (car spec)))))))))
 
 (defun count-content (section)
   (let ((count 0))
@@ -384,6 +327,78 @@
              (docontents (content section)
                (incf sum (compute-length content))))))))
     sum))
+
+(defmethod compute-length ((ref reference))
+  (if (not *print-circle*)
+      (compute-length (reference-section ref))
+      (compute-shared-length (expression (reference-section ref)))))
+
+;;; PRINT-CONTENT
+;; We do not want to overwrite PRINT-OBJECT for builtin type (i.e. character).
+
+(defgeneric print-content (content output))
+
+(defmethod print-content ((c character) (output stream))
+  (write-char c output)
+  (incf *position*)
+  c)
+
+(defmethod print-content ((o object) (output stream))
+  (let ((notation
+         (let ((*print-circle*))
+           (funcall (object-key o) (object-content o)))))
+    (declare (type simple-string notation))
+    (labels ((print-colored ()
+               (write-string
+                 (let ((cl-ansi-text:*color-mode* :8bit))
+                   (apply #'cl-ansi-text:make-color-string
+                          (or *color* (object-color o))))
+                 output)
+               (print-it)
+               (write-string cl-ansi-text:+reset-color-string+ output))
+             (print-refer (shared char)
+               (write-char #\# output)
+               (write (vivid-colors.shared:id shared :if-does-not-exist :error)
+                      :stream output
+                      :base 10)
+               (write-char char output))
+             (print-it ()
+               (write-string notation output)))
+      (or (let (shared?)
+            (when (and *print-circle*
+                       (setf shared?
+                               (vivid-colors.shared:sharedp
+                                 (object-content o))))
+              (if (not (object-firstp o))
+                  (print-refer shared? #\#)
+                  (if (and *print-vivid* (or *color* (object-color o)))
+                      (progn (print-refer shared? #\=) (print-colored))
+                      (progn (print-refer shared? #\=) (print-it))))))
+          (if (and *print-vivid* (or *color* (object-color o)))
+              (print-colored)
+              (print-it))))
+    (incf *position* (length notation)))
+  o)
+
+(defmethod print-content ((c colored-string) (output stream))
+  (with-enclose (output "\"" "\"")
+    (dospec (spec c)
+      ;; Out of our responds. Etypecase emits many notes.
+      (declare (optimize (speed 1)))
+      (etypecase spec
+        (string (write-string spec output) (incf *position* (length spec)))
+        ((cons string (cons cl-ansi-text:color-specifier))
+         (destructuring-bind
+             (string . color)
+             spec
+           (when *print-vivid*
+             (write-string (apply #'cl-ansi-text:make-color-string color)
+                           output))
+           (write-string string output)
+           (when *print-vivid*
+             (write-string cl-ansi-text:+reset-color-string+ output))
+           (incf *position* (length string)))))))
+  c)
 
 (defun mandatory? (section)
   (let ((seen (make-hash-table :test #'eq)))
@@ -495,19 +510,6 @@
                       (print-newline nil s o))))))
              (indent (set-indent content s)))))))))
 
-;;;; REFERENCE
-
-(eval-when (:compile-toplevel :load-toplevel :execute)
- ;; [1]
- (defstruct (reference (:constructor reference (&key section)))
-   "The substitution of the circular reference."
-   (section (error "SECTION is required.") :type section)))
-
-(defmethod compute-length ((ref reference))
-  (if (not *print-circle*)
-      (compute-length (reference-section ref))
-      (compute-shared-length (expression (reference-section ref)))))
-
 (defmethod print-content ((ref reference) (o stream))
   (if (not *print-circle*)
       (print-content (reference-section ref) o)
@@ -517,10 +519,7 @@
                   (expression (reference-section ref)) t)
                 :if-does-not-exist :error))))
 
-(deftype content ()
-  '(or object character indent newline section colored-string reference))
-
-;;; An abstraction barriar as UPDATOR.
+;;;; An abstraction barriar as UPDATOR.
 
 (declaim
  (ftype (function (content section) (values content &optional))
@@ -529,7 +528,7 @@
 (defun appoint-to-write (object section)
   (setf (vivid-colors.queue:tail (contents section)) object))
 
-;;;; WRITE-CONTENT
+;;;; FULFILL-TO-WRITE
 ;;; Interface for end user.
 ;;; We do not want to make end user care to wrap PRINT-CONTENT with WITH-PRINT-CONTEXT.
 
