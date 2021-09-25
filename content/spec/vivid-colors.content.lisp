@@ -451,13 +451,13 @@
 #?(vivid-colors.shared:context ()
     (let ((*print-circle* t)
 	  (s (section :prefix "(" :suffix ")"))
-	  (string ""))
-      (appoint-to-write (object :content string) s)
+	  (symbol '#:hoge))
+      (appoint-to-write (object :content symbol) s)
       (appoint-to-write #\space s)
-      (appoint-to-write (object :content string) s)
-      (vivid-colors.shared:id (vivid-colors.shared::storedp string) :if-does-not-exist :set)
+      (appoint-to-write (object :content symbol) s)
+      (vivid-colors.shared:id (vivid-colors.shared::storedp symbol) :if-does-not-exist :set)
       (compute-length s)))
-:equivalents (length (write-to-string '(#0="" #0#) :circle t :escape t))
+:equivalents (length (write-to-string '(#0=#:hoge #0#) :circle t :escape t))
 
 ; Case circular list of CAR.
 #?(vivid-colors.shared:context ()

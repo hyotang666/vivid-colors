@@ -7,6 +7,7 @@
 
 (requirements-about common-lisp)
 
+#-ecl
 #?(subtypep '(cons (member quote)) 'list) => T
 
 (requirements-about VPRINT :doc-type function)

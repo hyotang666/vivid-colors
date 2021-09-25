@@ -190,6 +190,12 @@
       (when (typep exp key-type)
         (rplacd tail (setf tail (list vprinter)))))))
 
+(defun subtype? (type1 type2)
+  (or (subtypep type1 type2)
+      #+ecl
+      (and (typep type1 '(cons (eql cons)))
+	   (find type2 '(cons list)))))
+
 (declaim
  (ftype (function (t &optional vprint-dispatch)
          (values (or symbol function) boolean &optional))
@@ -197,7 +203,7 @@
 
 (defun vprint-dispatch (exp &optional (vprint-dispatch *vprint-dispatch*))
   (let ((vprinters
-         (sort (vprinters exp vprint-dispatch) #'subtypep
+         (sort (vprinters exp vprint-dispatch) #'subtype?
                :key #'vprinter-type)))
     (cond ((null vprinters) (values *default-printer* nil))
           ((null (cdr vprinters)) ; one element.

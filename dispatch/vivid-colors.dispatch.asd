@@ -2,7 +2,7 @@
 (in-package :asdf)
 (defsystem "vivid-colors.dispatch"
   :version
-  "0.0.3"
+  "0.1.0"
   :depends-on
   (
    "alexandria"         ; Utilities implicitly depends on via hash-table-ext.

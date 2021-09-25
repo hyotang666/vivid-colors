@@ -103,26 +103,10 @@ SBCL
 ### Tested with
 * SBCL/2.1.7
 * CCL/1.12.1
-* ECL/21.2.1 ; Failed.
+* ECL/21.2.1
 * CLISP/2.49
 
 ## Known issues.
-### ECL
-Currently we stop to support ECL due to its `SUBTYPEP` behavior.
-
-[The issue reported here.](https://gitlab.com/embeddable-common-lisp/ecl/-/issues/520)
-
-```lisp
-#+ecl
-(subtypep '(cons (member quote)) 'list)
-NIL
-NIL
-
-#-ecl
-(subtypep '(cons (member quote)) 'list)
-T
-T
-```
 
 ## Installation
 
