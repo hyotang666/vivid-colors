@@ -5,11 +5,6 @@
 (in-package :vivid-colors.spec)
 (setup :vivid-colors)
 
-(requirements-about common-lisp)
-
-#-ecl
-#?(subtypep '(cons (member quote)) 'list) => T
-
 (requirements-about VPRINT :doc-type function)
 
 ;;;; Description:

@@ -5,6 +5,14 @@
 (in-package :vivid-colors.dispatch.spec)
 (setup :vivid-colors.dispatch)
 
+(requirements-about common-lisp)
+
+#-ecl
+#?(subtypep '(cons (member quote)) 'list) => T
+;; as guard for ecl.
+#+ecl
+#?(subtypep '(cons (member quote)) 'list) => NIL
+
 (requirements-about *VPRINT-DISPATCH* :doc-type variable)
 
 ;;;; Description:
