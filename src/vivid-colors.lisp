@@ -139,7 +139,7 @@
       (default-printer output vector)
       (vprint-logical-block (output nil :prefix "#(" :suffix ")")
         (do ((i 0 (1+ i)))
-            (nil)
+            ((not (array-in-bounds-p vector i)))
           (vprint (aref vector i) output t)
           (if (array-in-bounds-p vector (1+ i))
               (progn (write-char #\Space output) (vprint-newline :fill output))

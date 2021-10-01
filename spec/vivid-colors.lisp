@@ -79,6 +79,10 @@
 	       (cl-ansi-text:with-color (cl-colors2:+tomato+ :stream out)
 		 (prin1 "tomato" out))))
 
+; Vector.
+#?(vprint #())
+:outputs "#()"
+
 ; QUOTE is printed as macro char.
 #?(vprint ''car)
 :outputs "'CAR"
