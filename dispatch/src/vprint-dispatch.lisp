@@ -81,7 +81,7 @@
         find-vprint-dispatch))
 
 (defun find-vprint-dispatch (name)
-  #+clisp
+  #+(or clisp allegro)
   (check-type name symbol)
   (values (gethash name *vprint-dispatch-repository*)))
 
@@ -95,7 +95,7 @@
         store-vprint-dispatch))
 
 (defun store-vprint-dispatch (name vprint-dispatch)
-  #+clisp
+  #+(or clisp allegro)
   (progn (check-type name symbol) (check-type vprint-dispatch vprint-dispatch))
   (setf (gethash name *vprint-dispatch-repository*) vprint-dispatch))
 
@@ -137,7 +137,7 @@
 
 (defun set-vprint-dispatch
        (type function &optional (priority 0) (table *vprint-dispatch*))
-  #+clisp
+  #+(or clisp allegro)
   (progn (check-type function (or symbol function)) (check-type priority real))
   (assert (millet:type-specifier-p type))
   (remhash type (vprint-dispatch-table table))
@@ -193,8 +193,7 @@
 (defun subtype? (type1 type2)
   (or (subtypep type1 type2)
       #+ecl
-      (and (typep type1 '(cons (eql cons)))
-	   (find type2 '(cons list)))))
+      (and (typep type1 '(cons (eql cons))) (find type2 '(cons list)))))
 
 (declaim
  (ftype (function (t &optional vprint-dispatch)

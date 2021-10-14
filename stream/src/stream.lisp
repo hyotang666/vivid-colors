@@ -250,10 +250,10 @@
                                                          ,s)
                   (setf (section *vstream*) ,s)))))))))
 
-(defmacro vprint-pop () (error 'out-of-scope :name 'vprint-put))
+(defmacro vprint-pop () `(error 'out-of-scope :name 'vprint-put))
 
 (defmacro vprint-exit-if-list-exhausted ()
-  (error 'out-of-scope :name 'vprint-exit-if-list-exhausted))
+  `(error 'out-of-scope :name 'vprint-exit-if-list-exhausted))
 
 ;;;; VPRINT
 

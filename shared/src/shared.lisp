@@ -70,6 +70,8 @@
 ;;; An abstraction barriar as UPDATOR, REFERER.
 
 (defun id (shared &key (if-does-not-exist nil))
+  #+allegro
+  (check-type shared shared)
   (or (%id shared)
       (ecase if-does-not-exist
         ((nil))
