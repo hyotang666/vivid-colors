@@ -2,7 +2,7 @@
 (in-package :asdf)
 (defsystem "vivid-colors.stream"
   :version
-  "1.2.2"
+  "1.2.3"
   :depends-on
   (
    "alexandria"                 ; Utilities, implicitly depends on via cl-ansi-text.

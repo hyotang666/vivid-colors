@@ -51,7 +51,7 @@
             :accessor section
             :documentation "Section block.")))
 
-#+(or ccl clisp)
+#+(or ccl clisp cmu)
 (defmethod trivial-gray-streams:stream-line-column ((s vprint-stream)) nil)
 
 ;; Adding character.
