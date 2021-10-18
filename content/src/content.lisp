@@ -96,9 +96,9 @@
   ;; CCL needs the knowledge about the type CONTENT in compile time.
   (defstruct (indent (:constructor indent
                       (&key kind width &aux
-                       #+(or clisp allegro)
+                       #+(or clisp allegro cmu)
                        (kind (progn (check-type kind indent-kind) kind))
-                       #+(or clisp allegro)
+                       #+(or clisp allegro cmu)
                        (width
                         (progn (check-type width (unsigned-byte 8)) width)))))
     "An appointment of the indentation."
@@ -113,7 +113,7 @@
   ;; [1]
   (defstruct (newline (:constructor newline
                        (&key kind &aux
-                        #+(or clisp allegro)
+                        #+(or clisp allegro cmu)
                         (kind (progn (check-type kind newline-kind) kind)))))
     "An appointment of the pretty newline."
     (kind (error "KIND is required.") :type newline-kind :read-only t)))
@@ -174,7 +174,7 @@
   (defstruct (section (:conc-name nil)
                       (:constructor section
                        (&key start prefix contents suffix color expression &aux
-                        #+(or clisp allegro)
+                        #+(or clisp allegro cmu)
                         (start
                           (progn
                            (check-type start
@@ -191,7 +191,7 @@
                         #+(or clisp allegro)
                         (suffix
                           (progn (check-type suffix simple-string) suffix))
-                        #+(or clisp allegro)
+                        #+(or clisp allegro cmu)
                         (color
                           (progn
                            (check-type color
@@ -579,7 +579,7 @@
         ((:pretty *print-pretty*) *print-pretty*)
         ((:right-margin *print-right-margin*) *print-right-margin*)
         ((:miser-width *print-miser-width*) *print-miser-width*))
-  #+(or clisp allegro)
+  #+(or clisp allegro cmu)
   (progn
    (check-type *print-right-margin* (or null unsigned-byte))
    (check-type *print-miser-width* (or null unsigned-byte)))
