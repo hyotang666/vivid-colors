@@ -72,7 +72,11 @@
 
 ;;;; Exceptional-Situations:
 
-(requirements-about COPY-VPRINT-DISPATCH :doc-type function)
+(requirements-about COPY-VPRINT-DISPATCH :doc-type function
+		    :around (let ((*vprint-dispatch*
+				    (vivid-colors.dispatch::make-vprint-dispatch
+				      :name :dummy)))
+			      (call-body)))
 
 ;;;; Description:
 
@@ -84,16 +88,22 @@
 
 ; vprint-dispatch := unspecified.
 ; If not specified, copy the value of *VPRINT-DISPATCH*.
-#?(copy-vprint-dispatch)
-:satisfies (lambda (result)
-	     (& (equalp result *vprint-dispatch*)
-		(not (eq result *vprint-dispatch*))))
+#?(let ((copy (copy-vprint-dispatch)))
+    (values copy
+	    (eq copy *vprint-dispatch*)))
+:multiple-value-satisfies (lambda (copy eq?)
+			    (& (equalp copy (vivid-colors.dispatch::make-vprint-dispatch
+					      :name :dummy))
+			       (not eq?)))
 
 ; If specified NIL, default vprint-dispatch table is copied.
-#?(let ((temp *vprint-dispatch*)
-	(*vprint-dispatch* (vivid-colors.dispatch::make-vprint-dispatch :name :dummy)))
-    (values (equalp *vprint-dispatch* (copy-vprint-dispatch nil))
-	    (equalp temp (copy-vprint-dispatch nil))))
+#?(let ((vivid-colors.dispatch::*vprint-dispatch-repository* (make-hash-table)))
+    (store-vprint-dispatch :standard (vivid-colors.dispatch::make-vprint-dispatch
+				       :name :standard))
+    (let ((*vprint-dispatch* (vivid-colors.dispatch::make-vprint-dispatch :name :dummy)))
+      (values (equalp *vprint-dispatch* (copy-vprint-dispatch nil))
+	      (equalp (find-vprint-dispatch :standard)
+		      (copy-vprint-dispatch nil)))))
 :values (NIL T)
 
 ; If vprint-dispatch is specified, such vprint-dispatch is copied.
@@ -196,13 +206,21 @@
 
 ;;;; Exceptional-Situations:
 ; When same key-type is exists, an error is signaled.
-#?(let ((*vprint-dispatch* (vivid-colors.dispatch::make-vprint-dispatch
-			     :name :dummy
-			     :table (alexandria:plist-hash-table
-				      (list 'null (vivid-colors.dispatch::make-vprinter
-						    :type 'null
-						    :function 'list))))))
-    (merge-vprint-dispatch *vprint-dispatch* (find-vprint-dispatch :standard)))
+#?(let ((vivid-colors.dispatch::*vprint-dispatch-repository* (make-hash-table)))
+    (store-vprint-dispatch :standard (vivid-colors.dispatch::make-vprint-dispatch
+				       :name :standard
+				       :table
+				       (alexandria:plist-hash-table
+					 (list 'null (vivid-colors.dispatch::make-vprinter
+						       :type 'null
+						       :function 'list)))))
+    (let ((*vprint-dispatch* (vivid-colors.dispatch::make-vprint-dispatch
+			       :name :dummy
+			       :table (alexandria:plist-hash-table
+					(list 'null (vivid-colors.dispatch::make-vprinter
+						      :type 'null
+						      :function 'list))))))
+      (merge-vprint-dispatch *vprint-dispatch* (find-vprint-dispatch :standard))))
 :signals error
 ,:with-restarts (replace ignore)
 
@@ -263,11 +281,15 @@
 
 ;;;; Side-Effects:
 ; Modify *vprint-dispatch*.
-#?(let ((*vprint-dispatch* *vprint-dispatch*))
-    (values (vivid-colors.dispatch::vprint-dispatch-name *vprint-dispatch*)
-	    (progn (in-vprint-dispatch :vivid)
-		   (vivid-colors.dispatch::vprint-dispatch-name *vprint-dispatch*))))
-:values (:STANDARD :VIVID)
+#?(let ((vivid-colors.dispatch::*vprint-dispatch-repository*
+	  (make-hash-table)))
+    (store-vprint-dispatch :first (vivid-colors.dispatch::make-vprint-dispatch :name :first))
+    (let ((*vprint-dispatch*
+	    (vivid-colors.dispatch::make-vprint-dispatch :name :second)))
+      (values (vivid-colors.dispatch::vprint-dispatch-name *vprint-dispatch*)
+	      (progn (in-vprint-dispatch :first)
+		     (vivid-colors.dispatch::vprint-dispatch-name *vprint-dispatch*)))))
+:values (:SECOND :FIRST)
 
 ;;;; Notes:
 
