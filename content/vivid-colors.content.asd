@@ -2,7 +2,7 @@
 (in-package :asdf)
 (defsystem "vivid-colors.content"
   :version
-  "7.0.3"
+  "7.0.4"
   :depends-on
   (
    "alexandria"                 ; Utilities, implicitly depends on via (cl-ansi-text vivid-colors.queue).
