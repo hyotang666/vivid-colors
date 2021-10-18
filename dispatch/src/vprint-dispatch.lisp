@@ -81,7 +81,7 @@
         find-vprint-dispatch))
 
 (defun find-vprint-dispatch (name)
-  #+(or clisp allegro)
+  #+(or clisp allegro abcl)
   (check-type name symbol)
   (values (gethash name *vprint-dispatch-repository*)))
 
@@ -95,7 +95,7 @@
         store-vprint-dispatch))
 
 (defun store-vprint-dispatch (name vprint-dispatch)
-  #+(or clisp allegro)
+  #+(or clisp allegro abcl)
   (progn (check-type name symbol) (check-type vprint-dispatch vprint-dispatch))
   (setf (gethash name *vprint-dispatch-repository*) vprint-dispatch))
 
