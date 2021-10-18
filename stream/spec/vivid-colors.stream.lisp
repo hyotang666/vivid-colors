@@ -273,7 +273,15 @@
 
 ;;;; Exceptional-Situations:
 ; When <LIST> bound by non-list value, it is VPRINTed.
-#?(vprint-logical-block (nil 'not-list))
+#?(let ((vivid-colors.dispatch::*vprint-dispatch-repository* (make-hash-table)))
+    (vivid-colors.dispatch::store-vprint-dispatch
+      :standard
+
+      (vivid-colors.dispatch::make-vprint-dispatch
+	:name :standard))
+    (let ((vivid-colors.dispatch:*vprint-dispatch*
+	   (vivid-colors.dispatch:find-vprint-dispatch :standard)))
+      (vprint-logical-block (nil 'not-list))))
 :outputs "NOT-LIST"
 
 (requirements-about VPRINT-POP :doc-type function)
