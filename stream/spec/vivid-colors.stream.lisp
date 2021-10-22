@@ -174,7 +174,7 @@
 :signals condition
 
 ; indent := (unsigned-byte 62), otherwise implementation dependent condition.
-#?(vprint-indient :block "not unsigned-byte" (make-instance 'vivid-colors.stream::vprint-stream))
+#?(vprint-indent :block "not unsigned-byte" (make-instance 'vivid-colors.stream::vprint-stream))
 :signals condition
 
 ; output := vprint-stream, otherwise implementation dependent condition.
