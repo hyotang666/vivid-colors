@@ -103,11 +103,11 @@ SBCL
 ### Tested with
 * SBCL/2.1.7
 * CCL/1.12.1
-* ECL/21.2.1 ; See [queue](../queue/README.md) and/or [dispatch](../dispatch/README.md).
+* ECL/21.2.1 ; See [queue](queue/README.md) and/or [dispatch](dispatch/README.md).
 * CLISP/2.49
 * Allegro/10.1
-* CMUCL/21D ; Failed. See [content](../content/README.md).
-* ABCL/1.8.0 ; See [queue](../queue/README.md) and/or [dispatch](../dispatch/README.md).
+* CMUCL/21D ; Failed. See [content](content/README.md).
+* ABCL/1.8.0 ; See [queue](queue/README.md) and/or [dispatch](dispatch/README.md).
 
 ## Installation
 
