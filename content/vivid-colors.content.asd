@@ -3,6 +3,7 @@
 (defsystem "vivid-colors.content"
   :version
   "7.0.4"
+  :description "The module of the printing appointments and its fulfills for vivid-colors."
   :depends-on
   (
    "alexandria"                 ; Utilities, implicitly depends on via (cl-ansi-text vivid-colors.queue).
