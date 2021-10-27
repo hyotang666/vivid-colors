@@ -1,11 +1,6 @@
 # VIVID-COLORS.STREAM 0.0.0
 ## What is this?
-
-### Current lisp world
-
-### Issues
-
-### Proposal
+The module to provide DSL for vivid-colors.
 
 ## Usage
 
@@ -21,10 +16,10 @@
 * SBCL/2.1.7
 * CCL/1.12.1
 * CLISP/2.49
-* ECL/21.2.1
+* ECL/21.2.1 ; See [queue](../queue/README.md) and/or [dispatch](../dispatch/README.md).
 * Allegro/10.1
-* CMUCL/21D
-* ABCL/1.8.0
+* CMUCL/21D ; See [content](../content/README.md).
+* ABCL/1.8.0 ; See [queue](../queue/README.md) and/or [dispatch](../dispatch/README.md).
 
 ## Installation
 
