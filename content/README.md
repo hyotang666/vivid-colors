@@ -1,11 +1,6 @@
 # VIVID-COLORS.CONTENT 0.0.0
 ## What is this?
-
-### Current lisp world
-
-### Issues
-
-### Proposal
+The module of the printing appointments and its fulfills for vivid-colors.
 
 ## Usage
 
@@ -21,10 +16,10 @@
 * SBCL/2.1.7
 * CCL/1.12.1
 * CLISP/2.49
-* ECL/21.2.1
+* ECL/21.2.1 ; See [vivid-colors.queue.](../queue/README.md)
 * Allegro/10.1
 * CMUCL/21D ; Failed.
-* ABCL/1.8.0
+* ABCL/1.8.0 ; See [vivid-colors.queue.](../queue/README.md)
 
 ## Known issue
 ### CMUCL
