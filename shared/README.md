@@ -1,11 +1,6 @@
 # VIVID-COLORS.SHARED 0.0.0
 ## What is this?
-
-### Current lisp world
-
-### Issues
-
-### Proposal
+Shared object module for vivid-colors.
 
 ## Usage
 
