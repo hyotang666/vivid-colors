@@ -2,7 +2,7 @@
 (in-package :asdf)
 (defsystem "vivid-colors"
   :version
-  "7.1.4"
+  "7.1.5"
   :depends-on
   (
    "lambda-fiddle"              ; Utilities for lambda list processing.

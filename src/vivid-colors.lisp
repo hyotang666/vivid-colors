@@ -21,6 +21,9 @@
 
 (in-package :vivid-colors)
 
+#+(or sbcl ccl clisp ecl allegro #|cmucl|# abcl)
+(pushnew :vivid-colors *features*)
+
 ;;;; UTILITIES
 
 (let ((non-printable-code-point (make-hash-table)))
