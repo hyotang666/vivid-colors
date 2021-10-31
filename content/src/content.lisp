@@ -264,7 +264,7 @@
              (check-type string? string)
              (length string?))))
     (declare
-      (ftype (function (*) (values (mod #.array-total-size-limit) &optional))
+      (ftype (function (t) (values (mod #.array-total-size-limit) &optional))
              object-length))
     (let* ((content (object-content object))
            (shared? (and *print-circle* (vivid-colors.shared:sharedp content))))
@@ -292,7 +292,7 @@
 
 (defmethod compute-length ((section section))
   (declare
-   (ftype (function (*) (values (mod #.array-total-size-limit) &optional))
+   (ftype (function (t) (values (mod #.array-total-size-limit) &optional))
           compute-length))
   (let ((sum 0))
     (declare (type (mod #.most-positive-fixnum) sum))
