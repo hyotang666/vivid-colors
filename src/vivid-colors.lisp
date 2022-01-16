@@ -124,7 +124,12 @@
 
 (defun vprint-list (output list &optional (newline-kind :fill))
   (cond
-    ((and (symbolp (car list)) (macro-function (car list)))
+    ((and (symbolp (car list))
+          (macro-function (car list))
+          #+clisp
+          (not
+            (string= "COMMON-LISP"
+                     (package-name (symbol-package (car list))))))
      (vprint-macrocall output list))
     ((and (symbolp (car list)) (fboundp (car list)))
      (vprint-funcall output list))
