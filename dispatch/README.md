@@ -19,7 +19,7 @@ The module to printer dispatching feature for vivid-colors.
 * ECL/21.2.1 ; See below.
 * Allegro/10.1
 * CMUCL/21D
-* ABCL/1.8.0 ; See below.
+* ABCL/1.9.0 ; See below.
 
 ### Known issue.
 #### millet:type-specifier-p.

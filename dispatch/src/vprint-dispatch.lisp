@@ -137,7 +137,7 @@
 
 (defun set-vprint-dispatch
        (type function &optional (priority 0) (table *vprint-dispatch*))
-  #+(or clisp allegro)
+  #+(or clisp allegro abcl)
   (progn (check-type function (or symbol function)) (check-type priority real))
   (assert (millet:type-specifier-p type))
   (remhash type (vprint-dispatch-table table))
