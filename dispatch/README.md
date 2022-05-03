@@ -13,7 +13,7 @@ The module to printer dispatching feature for vivid-colors.
 ### Developed with
 
 ### Tested with
-* SBCL/2.1.7
+* SBCL/2.2.4
 * CCL/1.12.1
 * CLISP/2.49
 * ECL/21.2.1 ; See below.
